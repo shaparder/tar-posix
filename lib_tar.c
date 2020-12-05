@@ -1,9 +1,53 @@
 #include "lib_tar.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <string.h>
 
 #define BSIZE 512
 
 char **entries;
+int count; // number of entries count
 
+/**
+ * free allocated memory, print error to stderr and exit.
+ *
+ */
+void exit_err()
+{
+    for (int i = 0; i < count; i++) {
+        free(entries[i]);
+    }
+
+    fprintf(stderr, "Program error: %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * create entries array for future referencing
+ *
+ * @param tar_fd
+ */
+void build_entries(int tar_fd)
+{
+    FILE *tar_fp = fdopen(tar_fd, "r");
+    if (tar_fp == NULL)
+        exit_err();
+
+    uint8_t buffer[BSIZE];
+    count = 0;
+    while (fread(buffer, BSIZE, 1, tar_fp) > 0)
+    {
+        *(entries + count) = get_path(buffer);
+        count++;
+        if (is_file_header(buffer))
+        {
+            // check size of file, if > 0
+            // set next entries in array to same path
+        }
+    }
+}
 
 /**
  * Checks whether the archive is valid.
@@ -20,20 +64,24 @@ char **entries;
  *         -2 if the archive contains a header with an invalid version value,
  *         -3 if the archive contains a header with an invalid checksum value
  */
-int check_archive(int tar_fd) {
-  int hdr_nbr = 0;
-  int read_ret;
-  uint8_t *buffer = malloc(sizeof(uint8_t) * BSIZE);
+int check_archive(int tar_fd)
+{
+    if (entries == NULL)
+        build_entries(tar_fd);
 
-  while (read_ret = read_file(tar_fd, ???, 0, buffer, BSIZE) > 0)
-  {
+    // int hdr_nbr = 0;
+    // int read_ret;
+    // uint8_t *buffer = malloc(sizeof(uint8_t) * BSIZE);
 
-  }
+    // while (read_ret = read_file(tar_fd, ???, 0, buffer, BSIZE) > 0)
+    // {
+
+    // }
 
     //if (invalid_magic_value) return -1;
     //if (invalid_version_value) return -2;
     //if (invalid_checksum_value) return -3;
-    free(buffer);
+    //free(buffer);
 }
 
 /**
@@ -45,7 +93,17 @@ int check_archive(int tar_fd) {
  * @return zero if no entry at the given path exists in the archive,
  *         index of entry in archive otherwise.
  */
-int exists(int tar_fd, char *path) {
+int exists(int tar_fd, char *path)
+{
+    if (entries == NULL) build_entries(tar_fd);
+
+    //for all entries check if path corresponds
+    for (int i = 0; i < count; i++)
+    {
+        if (strcmp(path, entries[i]) == 0) {
+            return i;
+        }
+    }
     return 0;
 }
 
@@ -58,8 +116,17 @@ int exists(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not a directory,
  *         number of entries in the directory otherwise.
  */
-int is_dir(int tar_fd, char *path) {
-    return 0;
+int is_dir(int tar_fd, char *path)
+{
+    int exist = exists(tar_fd, path);
+    if (exist) {
+        //get buffer from index
+        if (is_dir_header(buffer)) {
+            //count number of files in dir checking string contains on entries
+        }
+    } else {
+        return 0;
+    }
 }
 
 /**
@@ -71,7 +138,8 @@ int is_dir(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not a file,
  *         number of 512 bytes blocks otherwise.
  */
-int is_file(int tar_fd, char *path) {
+int is_file(int tar_fd, char *path)
+{
     return 0;
 }
 
@@ -83,10 +151,10 @@ int is_file(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not symlink,
  *         index of linked file otherwise.
  */
-int is_symlink(int tar_fd, char *path) {
+int is_symlink(int tar_fd, char *path)
+{
     return 0;
 }
-
 
 /**
  * Lists the entries at a given path in the archive.
@@ -101,8 +169,9 @@ int is_symlink(int tar_fd, char *path) {
  * @return zero if no directory at the given path exists in the archive,
  *         any other value otherwise.
  */
-int list(int tar_fd, char *path, char **entries, size_t *no_entries) {
-    return 0;
+int list(int tar_fd, char *path, char **entries, size_t *no_entries)
+{
+    if (exists())
 }
 
 /**
@@ -122,19 +191,9 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries) {
  *         a positive value if the file was partially read, representing the remaining bytes left to be read.
  *
  */
-ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len) {
+ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
+{
     //read(tar_fd, );
-}
-
-/**
- * get the path from a buffer containing an entry (512 bytes)
- *
- * @param buffer
- * @return char*
- */
-char* get_path(uint8_t* buffer) {
-  char* path = buf_slice(buffer, 0, 100);
-  return path;
 }
 
 /**
@@ -146,9 +205,65 @@ char* get_path(uint8_t* buffer) {
  *
  * @return allocated char* containing the slice
  */
-char*  buf_slice(uint8_t* src, size_t offset, size_t len) {
-  char* dest = (char *)malloc(sizeof(char) * len);
-  memcpy(dest, src + offset, len);
+char *buf_slice(uint8_t *src, size_t offset, size_t len)
+{
+    char *dest = (char *)malloc(sizeof(char) * len);
+    memcpy(dest, src + offset, len);
 
-  return dest;
+    return dest;
+}
+
+/**
+ * get the path from a buffer containing an entry (512 bytes)
+ *
+ * @param buffer
+ * @return char*
+ */
+char *get_path(uint8_t *buffer)
+{
+    char *path = buf_slice(buffer, 0, 100);
+    return path;
+}
+
+bool is_file_header(uint8_t *buffer)
+{
+    char typeflag = buffer[156];
+
+    switch (typeflag)
+    {
+    case '0':
+        return true;
+    case '\0':
+        return true;
+    case '3':
+        return true;
+    case '4':
+        return true;
+    case '6':
+        return true;
+    case '7':
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool is_dir_header(uint8_t *buffer)
+{
+    char typeflag = buffer[156];
+
+    if (typeflag == '5')
+        return true;
+    else
+        return false;
+}
+
+bool is_link_header(uint8_t *buffer)
+{
+    char typeflag = buffer[156];
+
+    if (typeflag == '1' || typeflag == '2')
+        return true;
+    else
+        return false;
 }
