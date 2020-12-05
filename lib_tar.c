@@ -7,8 +7,8 @@
 
 #define BSIZE 512
 
-char **entries;
-int count; // number of entries count
+uint8_t **entries; //entries array
+int count; //number of entries count
 
 /**
  * free allocated memory, print error to stderr and exit.
@@ -31,11 +31,11 @@ void exit_err()
  */
 void build_entries(int tar_fd)
 {
-    FILE *tar_fp = fdopen(tar_fd, "r");
+    FILE* tar_fp = fdopen(tar_fd, "r");
     if (tar_fp == NULL)
         exit_err();
 
-    uint8_t buffer[BSIZE];
+    uint8_t* buffer[BSIZE];
     count = 0;
     while (fread(buffer, BSIZE, 1, tar_fp) > 0)
     {
@@ -118,15 +118,30 @@ int exists(int tar_fd, char *path)
  */
 int is_dir(int tar_fd, char *path)
 {
-    int exist = exists(tar_fd, path);
-    if (exist) {
+    int index = exists(tar_fd, path);
+    if (index) {
         //get buffer from index
+        uint8_t* buffer = get_buffer(tar_fd, index);
         if (is_dir_header(buffer)) {
             //count number of files in dir checking string contains on entries
+            int filecount = 0;
+            while (strstr(entries[index + filecount], path) != NULL) filecount++;
+            return filecount;
+        } else {
+            return 0;
         }
     } else {
         return 0;
     }
+}
+
+uint8_t get_buffer(int tar_fd, int b_offset) {
+    FILE* tar_fp = fdopen(tar_fd, "r");
+    uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE);
+    fseek(tar_fp, b_offset * BSIZE, SEEK_CUR);
+    fread(buffer, BSIZE, 1, tar_fp);
+
+    return buffer;
 }
 
 /**
@@ -171,7 +186,9 @@ int is_symlink(int tar_fd, char *path)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
-    if (exists())
+    if (is_dir(tar_fd, path)) {
+        // print all directories
+    }
 }
 
 /**
@@ -205,9 +222,9 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
  *
  * @return allocated char* containing the slice
  */
-char *buf_slice(uint8_t *src, size_t offset, size_t len)
+uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
 {
-    char *dest = (char *)malloc(sizeof(char) * len);
+    uint8_t* dest = (uint8_t *)malloc(sizeof(uint8_t) * len);
     memcpy(dest, src + offset, len);
 
     return dest;
@@ -219,9 +236,9 @@ char *buf_slice(uint8_t *src, size_t offset, size_t len)
  * @param buffer
  * @return char*
  */
-char *get_path(uint8_t *buffer)
+uint8_t* get_path(uint8_t *buffer)
 {
-    char *path = buf_slice(buffer, 0, 100);
+    char* path = buf_slice(buffer, 0, 100);
     return path;
 }
 
