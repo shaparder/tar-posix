@@ -1,5 +1,10 @@
 #include "lib_tar.h"
 
+#define BSIZE 512
+
+char **entries;
+
+
 /**
  * Checks whether the archive is valid.
  *
@@ -16,7 +21,19 @@
  *         -3 if the archive contains a header with an invalid checksum value
  */
 int check_archive(int tar_fd) {
-    return 0;
+  int hdr_nbr = 0;
+  int read_ret;
+  uint8_t *buffer = malloc(sizeof(uint8_t) * BSIZE);
+
+  while (read_ret = read_file(tar_fd, ???, 0, buffer, BSIZE) > 0)
+  {
+
+  }
+
+    //if (invalid_magic_value) return -1;
+    //if (invalid_version_value) return -2;
+    //if (invalid_checksum_value) return -3;
+    free(buffer);
 }
 
 /**
@@ -26,7 +43,7 @@ int check_archive(int tar_fd) {
  * @param path A path to an entry in the archive.
  *
  * @return zero if no entry at the given path exists in the archive,
- *         any other value otherwise.
+ *         index of entry in archive otherwise.
  */
 int exists(int tar_fd, char *path) {
     return 0;
@@ -39,7 +56,7 @@ int exists(int tar_fd, char *path) {
  * @param path A path to an entry in the archive.
  *
  * @return zero if no entry at the given path exists in the archive or the entry is not a directory,
- *         any other value otherwise.
+ *         number of entries in the directory otherwise.
  */
 int is_dir(int tar_fd, char *path) {
     return 0;
@@ -52,7 +69,7 @@ int is_dir(int tar_fd, char *path) {
  * @param path A path to an entry in the archive.
  *
  * @return zero if no entry at the given path exists in the archive or the entry is not a file,
- *         any other value otherwise.
+ *         number of 512 bytes blocks otherwise.
  */
 int is_file(int tar_fd, char *path) {
     return 0;
@@ -64,7 +81,7 @@ int is_file(int tar_fd, char *path) {
  * @param tar_fd A file descriptor pointing to the start of a tar archive file.
  * @param path A path to an entry in the archive.
  * @return zero if no entry at the given path exists in the archive or the entry is not symlink,
- *         any other value otherwise.
+ *         index of linked file otherwise.
  */
 int is_symlink(int tar_fd, char *path) {
     return 0;
@@ -106,5 +123,32 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries) {
  *
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len) {
-    return 0;
+    //read(tar_fd, );
+}
+
+/**
+ * get the path from a buffer containing an entry (512 bytes)
+ *
+ * @param buffer
+ * @return char*
+ */
+char* get_path(uint8_t* buffer) {
+  char* path = buf_slice(buffer, 0, 100);
+  return path;
+}
+
+/**
+ * @brief copy slice of array to
+ *
+ * @param src
+ * @param offset
+ * @param len
+ *
+ * @return allocated char* containing the slice
+ */
+char*  buf_slice(uint8_t* src, size_t offset, size_t len) {
+  char* dest = (char *)malloc(sizeof(char) * len);
+  memcpy(dest, src + offset, len);
+
+  return dest;
 }
