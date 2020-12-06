@@ -7,9 +7,6 @@
 
 #define BSIZE 512
 
-uint8_t **entries; //entries array
-int count; //number of entries count
-
 /**
  * free allocated memory, print error to stderr and exit.
  *
@@ -22,31 +19,6 @@ void exit_err()
 
     fprintf(stderr, "Program error: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
-}
-
-/**
- * create entries array for future referencing
- *
- * @param tar_fd
- */
-void build_entries(int tar_fd)
-{
-    FILE* tar_fp = fdopen(tar_fd, "r");
-    if (tar_fp == NULL)
-        exit_err();
-
-    uint8_t* buffer[BSIZE];
-    count = 0;
-    while (fread(buffer, BSIZE, 1, tar_fp) > 0)
-    {
-        *(entries + count) = get_path(buffer);
-        count++;
-        if (is_file_header(buffer))
-        {
-            // check size of file, if > 0
-            // set next entries in array to same path
-        }
-    }
 }
 
 /**
@@ -118,30 +90,36 @@ int exists(int tar_fd, char *path)
  */
 int is_dir(int tar_fd, char *path)
 {
-    int index = exists(tar_fd, path);
-    if (index) {
-        //get buffer from index
-        uint8_t* buffer = get_buffer(tar_fd, index);
-        if (is_dir_header(buffer)) {
-            //count number of files in dir checking string contains on entries
-            int filecount = 0;
-            while (strstr(entries[index + filecount], path) != NULL) filecount++;
-            return filecount;
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
+    // int index = exists(tar_fd, path);
+    // if (index) {
+        get buffer from index
+        // uint8_t* buffer = get_buffer(tar_fd, index);
+        // if (is_dir_header(buffer)) {
+            count number of files in dir checking string contains on entries
+            // int filecount = 0;
+            // while (strstr(entries[index + filecount], path) != NULL) filecount++;
+            // return filecount;
+        // } else {
+            // return 0;
+        // }
+    // } else {
+        // return 0;
+    // }
 }
 
-uint8_t get_buffer(int tar_fd, int b_offset) {
+uint8_t* get_buffer(int tar_fd, int* path, int nb) {
     FILE* tar_fp = fdopen(tar_fd, "r");
-    uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE);
-    fseek(tar_fp, b_offset * BSIZE, SEEK_CUR);
-    fread(buffer, BSIZE, 1, tar_fp);
+    uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE * nb);
 
-    return buffer;
+    while (fread(buffer, BSIZE, 1, tar_fp) > 0){
+        if (strcmp(path, buffer) == 0) {
+            if (nb > 1)
+                fread(buffer, BSIZE, nb - 1, tar_fp);
+            return buffer;
+        }
+    }
+
+    return NULL;
 }
 
 /**
@@ -230,20 +208,10 @@ uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
     return dest;
 }
 
-/**
- * get the path from a buffer containing an entry (512 bytes)
- *
- * @param buffer
- * @return char*
- */
-uint8_t* get_path(uint8_t *buffer)
-{
-    char* path = buf_slice(buffer, 0, 100);
-    return path;
-}
-
 bool is_file_header(uint8_t *buffer)
 {
+    if (buffer == NULL) return false;
+
     char typeflag = buffer[156];
 
     switch (typeflag)
@@ -267,6 +235,8 @@ bool is_file_header(uint8_t *buffer)
 
 bool is_dir_header(uint8_t *buffer)
 {
+    if (buffer == NULL) return false;
+
     char typeflag = buffer[156];
 
     if (typeflag == '5')
@@ -277,6 +247,8 @@ bool is_dir_header(uint8_t *buffer)
 
 bool is_link_header(uint8_t *buffer)
 {
+    if (buffer == NULL) return false;
+
     char typeflag = buffer[156];
 
     if (typeflag == '1' || typeflag == '2')
