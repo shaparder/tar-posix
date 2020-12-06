@@ -42,6 +42,27 @@ typedef struct posix_header
 #define TAR_INT(char_ptr) strtol(char_ptr, NULL, 8)
 
 /**
+ * @brief Get buffer from path in file at
+ *
+ * @param tar_fd File descriptor pointing to start of file
+ * @param path to search for in file descriptor
+ * @param nb number of blocks to store in buffer
+ * @return Buffer storing 512 bytes * nb if path match, NULL otherwise
+ */
+uint8_t* get_buffer(int tar_fd, char* path, int nb);
+
+/**
+ * @brief return type of block
+ *
+ * @param buffer containing block
+ * @return 0 = NULL buffer or not a header or unknown typeflag
+ *         1 = file
+ *         2 = directory
+ *         3 = link
+ */
+int blocktype(uint8_t *buffer);
+
+/**
  * Checks whether the archive is valid.
  *
  * Each non-null header of a valid archive has:

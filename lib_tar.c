@@ -14,17 +14,19 @@
  * @param nb number of blocks to store in buffer
  * @return Buffer storing 512 bytes * nb if path match, NULL otherwise
  */
-uint8_t* get_buffer(int tar_fd, int* path, int nb) {
+uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     FILE* tar_fp = fdopen(tar_fd, "r");
     uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE * nb);
 
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
-        if (strcmp(path, buffer) == 0) {
+        if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
-                fread(buffer, BSIZE, nb - 1, tar_fp);
+                fread(buffer + 512, BSIZE, nb - 1, tar_fp);
             return buffer;
         }
     }
+
+    free(buffer);
     return NULL;
 }
 
@@ -48,6 +50,7 @@ int check_archive(int tar_fd)
     //if (invalid_magic_value) return -1;
     //if (invalid_version_value) return -2;
     //if (invalid_checksum_value) return -3;
+    return 0;
 }
 
 /**
@@ -75,7 +78,7 @@ int exists(int tar_fd, char *path)
  * @brief return type of block
  *
  * @param buffer containing block
- * @return 0 = NULL buffer or unknown typeflag
+ * @return 0 = NULL buffer or not a header or unknown typeflag
  *         1 = file
  *         2 = directory
  *         3 = link
@@ -85,6 +88,7 @@ int blocktype(uint8_t *buffer)
     if (buffer == NULL) return 0;
 
     char typeflag = buffer[156];
+
     switch (typeflag)
     {
     case '0':
@@ -122,9 +126,14 @@ int blocktype(uint8_t *buffer)
 int is_file(int tar_fd, char *path)
 {
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
-    int ret = (blocktype(buffer) == 1) ? 1 : 0;
-    free(buffer);
-    return ret;
+
+    if (buffer == NULL) return 0;
+    else
+    {
+       int ret = (blocktype(buffer) == 1) ? 1 : 0;
+       free(buffer);
+       return ret;
+    }
 }
 
 /**
@@ -139,9 +148,14 @@ int is_file(int tar_fd, char *path)
 int is_dir(int tar_fd, char *path)
 {
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
-    int ret = (blocktype(buffer) == 2) ? 1 : 0;
-    free(buffer);
-    return ret;
+
+    if (buffer == NULL) return 0;
+    else
+    {
+      int ret = (blocktype(buffer) == 2) ? 1 : 0;
+      free(buffer);
+      return ret;
+    }
 }
 
 /**
@@ -155,9 +169,14 @@ int is_dir(int tar_fd, char *path)
 int is_symlink(int tar_fd, char *path)
 {
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
-    int ret = (blocktype(buffer) == 3) ? 1 : 0;
-    free(buffer);
-    return ret;
+
+    if (buffer == NULL) return 0;
+    else
+    {
+      int ret = (blocktype(buffer) == 3) ? 1 : 0;
+      free(buffer);
+      return ret;
+    }
 }
 
 /**
@@ -183,7 +202,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
  * @param link_header buffer containing symlink header
  * @return char* path of linked file
  */
-char* symlink_path(int8_t* link_header)
+char* symlink_path(uint8_t* link_header)
 {
     char* link = (char *)malloc(sizeof(char) * 100);
     memcpy(link, link_header + 157, 100);
@@ -191,12 +210,12 @@ char* symlink_path(int8_t* link_header)
 }
 
 // EN CONSTRUCTION JE SUIS DEAD
-uint32_t nb_fileblock(int8_t* file_header)
+uint32_t nb_fileblock(uint8_t* file_header)
 {
     char* size = (char *)malloc(sizeof(char) * 12);
     memcpy(size, file_header + 124, 12);
     // TO-DO: convertir size (uint8_t aka bytes) en integer (uint32_t), si tu veux le faire hesite pas j'ai trop la flemme
-    uint32_t int_repr = // TO-DO
+    uint32_t int_repr = 0;// TO-DO
     uint32_t nb = (int_repr + 512 - 1) / 512;
     free(size);
     return nb;
@@ -227,17 +246,20 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
     ssize_t ret;
 
     switch (type) {
-        case 0: //NULL
+        case 0: {//NULL
             ret = -1;
-        case 2: //directory
+          } break;
+        case 2: { //directory
             free(buffer);
             ret = -1;
-        case 3: //symlink
+          } break;
+        case 3: {//symlink
             char* link = symlink_path(buffer); // find linked file
             ret = read_file(tar_fd, link, offset, dest, len); // recursive call to link
             free(buffer);
             free(link);
-        case 1: //file
+          } break;
+        case 1: {//file
             uint32_t nb_blocks = nb_fileblock(buffer); // get number of blocks to read
             free(buffer);
             if (offset > nb_blocks * BSIZE) {
@@ -250,9 +272,9 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
                 ret = (ssize_t) unread_bytes;
                 free(buffer);
             }
+          } break;
     }
     return ret;
-
 }
 
 /**
@@ -271,5 +293,3 @@ uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
     return dest;
 }
  */
-
-

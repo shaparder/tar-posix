@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 #include "lib_tar.h"
 
@@ -26,7 +27,7 @@ void debug_dump(const uint8_t *bytes, size_t len) {
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("Usage: %s tar_file\n", argv[0]);
+        printf("Usage: ./%s tar_file\n", argv[0]);
         return -1;
     }
 
@@ -36,8 +37,16 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    int ret = check_archive(fd);
-    printf("check_archive returned %d\n", ret);
+    //int ret = check_archive(fd);
+    //printf("check_archive returned %d\n", ret);
 
+    uint8_t* buffer = get_buffer(fd, "folder1/", 2);
+    if (buffer == NULL) printf("NULL BUFFER");
+    else
+    {
+      debug_dump(buffer, 512 * 2);
+      blocktype(buffer);
+      free(buffer);
+    }
     return 0;
 }
