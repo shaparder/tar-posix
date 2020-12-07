@@ -30,6 +30,42 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     return NULL;
 }
 
+/*
+* functions used in check_archive
+*
+*/
+int check_sum(char* buffer){
+    char checksum = 0;
+    int SizeOfArray = strlen(512);
+
+    for(int x = 0; x < 148; x++)
+    {
+        checksum += buffer[x];
+    }
+    checksum += 8*((char) " ");
+    for(int x = 156; x < SizeOfArray; x++)
+    {
+        checksum += buffer[x];
+    }
+    return checksum==buffer+148;
+}
+
+int check_header(buffer){
+    if (strcmp(buffer+257,TMAGIC) != 0) return -1;
+    if (strcmp(buffer+263,TVERSION)!= 0) return -2;
+    if (check_sum(buffer)!=1) return -3;
+}
+
+int is_padding(char* buffer){
+    int i = 0;
+    while(i<512){
+        if(buffer + i++ !="\0"){
+            return 0;
+        }
+    }
+    return 1;
+}
+
 /**
  * Checks whether the archive is valid.
  *
@@ -47,11 +83,33 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
  */
 int check_archive(int tar_fd)
 {
-    //if (invalid_magic_value) return -1;
-    //if (invalid_version_value) return -2;
-    //if (invalid_checksum_value) return -3;
+    char* buffer;
+    char* path;
+    while (1){
+        buffer = get_buffer(tar_fd,path,1);
+        int type = blocktype(buffer);
+        if (type == 3){//symlink
+            path = symlink_path(buffer); // find linked file
+            continue; //jump to next iteration
+        } else if (type == 2){//directory
+            int check = check_header(buffer);
+            if (check < 0) return check;
+            free(buffer);
+            //il faut avancer que de une case
+            buffer = get_buffer(tar_fd,path,1);//need to change path
+        } else if (type ==1){ //file
+            int check = check_header(buffer);
+            if (check < 0) return check;
+            free(buffer);
+            int nb_blocks_offset = nb_fileblock(buffer);//il faut avancer de autant de case que taille de fichier
+            buffer = get_buffer(tar_fd,path,1);//need to cahnge path
+        } else if (is_padding(buffer)){
+           break;
+        }
+    }
     return 0;
 }
+
 
 /**
  * Checks whether an entry exists in the archive.
