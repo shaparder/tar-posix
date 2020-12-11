@@ -11,3 +11,7 @@ clean:
 
 submit: all
 	tar --posix --pax-option delete=".*" --pax-option delete="*time*" --no-xattrs --no-acl --no-selinux -c *.h *.c Makefile > soumission.tar
+
+lib_tar:
+	rm -f lib.o
+	gcc lib_tar.c lib_tar.h -o lib.o

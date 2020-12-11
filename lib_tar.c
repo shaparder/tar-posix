@@ -34,81 +34,46 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
 * functions used in check_archive
 *
 */
-int check_sum(char* buffer){
-    char checksum = 0;
-    int SizeOfArray = strlen(512);
-
+int check_sum(uint8_t* buffer){
+    size_t checksum = 0;
+    //int SizeOfArray = strlen(buffer);
+    int SizeOfArray = 512;
     for(int x = 0; x < 148; x++)
     {
         checksum += buffer[x];
     }
-    checksum += 8*((char) " ");
+    checksum += 8 * ' ';
     for(int x = 156; x < SizeOfArray; x++)
     {
         checksum += buffer[x];
     }
-    return checksum==buffer+148;
+    //buff slice
+    
+    size_t real_check_sum = TAR_INT((char*) buffer+148);
+    printf("checksym calculated:%li | checksum of header:%li\n", checksum, real_check_sum);
+    return checksum == real_check_sum;
 }
 
-int check_header(buffer){
-    if (strcmp(buffer+257,TMAGIC) != 0) return -1;
-    if (strcmp(buffer+263,TVERSION)!= 0) return -2;
+int check_header(uint8_t* buffer){
+    //buff slice
+    if (strcmp((char*) buffer+257,TMAGIC) != 0) return -1;
+    //buffslice
+    if (strcmp((char*) buffer+263,TVERSION)!= 0) return -2;
     if (check_sum(buffer)!=1) return -3;
+    return 0;
 }
 
-int is_padding(char* buffer){
+int is_padding(uint8_t* buffer){
     int i = 0;
     while(i<512){
-        if(buffer + i++ !="\0"){
+        if(*(buffer + i++) != '\0'){
             return 0;
         }
     }
     return 1;
 }
 
-/**
- * Checks whether the archive is valid.
- *
- * Each non-null header of a valid archive has:
- *  - a magic value of "ustar" and a null,
- *  - a version value of "00" and no null,
- *  - a correct checksum
- *
- * @param tar_fd A file descriptor pointing to the start of a file supposed to contain a tar archive.
- *
- * @return a zero or positive value if the archive is valid, representing the number of headers in the archive,
- *         -1 if the archive contains a header with an invalid magic value,
- *         -2 if the archive contains a header with an invalid version value,
- *         -3 if the archive contains a header with an invalid checksum value
- */
-int check_archive(int tar_fd)
-{
-    char* buffer;
-    char* path;
-    while (1){
-        buffer = get_buffer(tar_fd,path,1);
-        int type = blocktype(buffer);
-        if (type == 3){//symlink
-            path = symlink_path(buffer); // find linked file
-            continue; //jump to next iteration
-        } else if (type == 2){//directory
-            int check = check_header(buffer);
-            if (check < 0) return check;
-            free(buffer);
-            //il faut avancer que de une case
-            buffer = get_buffer(tar_fd,path,1);//need to change path
-        } else if (type ==1){ //file
-            int check = check_header(buffer);
-            if (check < 0) return check;
-            free(buffer);
-            int nb_blocks_offset = nb_fileblock(buffer);//il faut avancer de autant de case que taille de fichier
-            buffer = get_buffer(tar_fd,path,1);//need to cahnge path
-        } else if (is_padding(buffer)){
-           break;
-        }
-    }
-    return 0;
-}
+
 
 
 /**
@@ -215,6 +180,18 @@ int is_dir(int tar_fd, char *path)
       return ret;
     }
 }
+/**
+ * @brief get path of symlink file
+ *
+ * @param link_header buffer containing symlink header
+ * @return char* path of linked file
+ */
+char* symlink_path(uint8_t* link_header)
+{
+    char* link = (char *)malloc(sizeof(char) * 100);
+    memcpy(link, link_header + 157, 100);
+    return link;
+}
 
 /**
  * Checks whether an entry exists in the archive and is a symlink.
@@ -247,24 +224,12 @@ int is_symlink(int tar_fd, char *path)
  *                   The caller set it to the number of entry in entries.
  *                   The callee set it to the number of entry listed.
  *
- * @return zero if no directory at the given path exists in the archive,
+ * @return zero if no directory at the given path exists in the archive
  *         any other value otherwise.
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
     return 0;
-}
-/**
- * @brief get path of symlink file
- *
- * @param link_header buffer containing symlink header
- * @return char* path of linked file
- */
-char* symlink_path(uint8_t* link_header)
-{
-    char* link = (char *)malloc(sizeof(char) * 100);
-    memcpy(link, link_header + 157, 100);
-    return link;
 }
 
 // EN CONSTRUCTION JE SUIS DEAD
@@ -278,6 +243,52 @@ uint32_t nb_fileblock(uint8_t* file_header)
     free(size);
     return nb;
 }
+
+/**
+ * Checks whether the archive is valid.
+ *
+ * Each non-null header of a valid archive has:
+ *  - a magic value of "ustar" and a null,
+ *  - a version value of "00" and no null,
+ *  - a correct checksum
+ *
+ * @param tar_fd A file descriptor pointing to the start of a file supposed to contain a tar archive.
+ *
+ * @return a zero or positive value if the archive is valid, representing the number of headers in the archive,
+ *         -1 if the archive contains a header with an invalid magic value,
+ *         -2 if the archive contains a header with an invalid version value,
+ *         -3 if the archive contains a header with an invalid checksum value
+ */
+int check_archive(int tar_fd)
+{
+    uint8_t* buffer;
+    char* path;
+    while (1){
+        buffer = get_buffer(tar_fd,path,1);
+        int type = blocktype(buffer);
+        if (type == 3){//symlink
+            path = symlink_path(buffer); // find linked file
+            continue; //jump to next iteration
+        } else if (type == 2){//directory
+            int check = check_header(buffer);
+            if (check < 0) return check;
+            free(buffer);
+            //il faut avancer que de une case
+            buffer = get_buffer(tar_fd,path,1);//need to change path
+        } else if (type ==1){ //file
+            int check = check_header(buffer);
+            if (check < 0) return check;
+            free(buffer);
+            //int nb_blocks_offset = nb_fileblock(buffer);//il faut avancer de autant de case que taille de fichier
+            buffer = get_buffer(tar_fd,path,1);//need to cahnge path
+        } else if (is_padding(buffer)){
+           break;
+        }
+    }
+    return 0;
+}
+
+
 
 /**
  * Reads a file at a given path in the archive.
@@ -335,7 +346,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
     return ret;
 }
 
-/**
+/*
  * @brief copy slice of array to
  *
  * @param src
@@ -343,6 +354,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
  * @param len
  *
  * @return allocated char* containing the slice
+ */
 uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
 {
     uint8_t* dest = (uint8_t *)malloc(sizeof(uint8_t) * len);
@@ -350,4 +362,4 @@ uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
 
     return dest;
 }
- */
+ 
