@@ -18,7 +18,13 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     FILE* tar_fp = fdopen(tar_fd, "r");
     uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE * nb);
 
+    if (path==NULL){
+        fread(buffer, BSIZE, 1, tar_fp);
+        return buffer;
+    } 
+
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
+        //printf("get_buffer|buffer:%s\n",(char*) buffer);
         if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
                 fread(buffer + 512, BSIZE, nb - 1, tar_fp);
@@ -261,10 +267,13 @@ uint32_t nb_fileblock(uint8_t* file_header)
  */
 int check_archive(int tar_fd)
 {
-    uint8_t* buffer;
-    char* path;
+    uint8_t* buffer = get_buffer(tar_fd,NULL,1);;
+    char* path = (char*) buffer;
     while (1){
+        printf("check_archive|path:%s\n",path);fflush(stdout);
         buffer = get_buffer(tar_fd,path,1);
+        if(buffer == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
+
         int type = blocktype(buffer);
         if (type == 3){//symlink
             path = symlink_path(buffer); // find linked file

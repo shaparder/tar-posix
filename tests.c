@@ -40,8 +40,10 @@ int main(int argc, char **argv) {
     //int ret = check_archive(fd);
     //printf("check_archive returned %d\n", ret);
 
+    printf("checkarchive return:%i \n",check_archive(fd));
+
     uint8_t* buffer = get_buffer(fd, "folder1/", 2);
-    if (buffer == NULL) printf("NULL BUFFER");
+    if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
     else
     {
       debug_dump(buffer, 512 * 2);
