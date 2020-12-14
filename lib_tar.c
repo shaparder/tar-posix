@@ -87,8 +87,7 @@ uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
 */
 int check_sum(uint8_t* buffer){
     size_t checksum = 0;
-    //int SizeOfArray = strlen(buffer);
-    int SizeOfArray = 512;
+    int SizeOfArray = BSIZE;
     for(int x = 0; x < 148; x++)
     {
         checksum += buffer[x];
@@ -98,17 +97,14 @@ int check_sum(uint8_t* buffer){
     {
         checksum += buffer[x];
     }
-    //buff slice
-    
     size_t real_check_sum = TAR_INT((char*) buffer+148);
-    printf("checksym calculated:%li | checksum of header:%li\n", checksum, real_check_sum);
+    printf("check_sum|calculated:%li vs header_val:%li\n", checksum, real_check_sum);
     return checksum == real_check_sum;
 }
 
 int check_header(tar_header_t* buffer){
     
     if (strcmp((char*) buffer+257,TMAGIC) != 0) return -1;
-    //buffslice
     
     char ver[3];
     memcpy(ver,buffer->version,2);
@@ -288,14 +284,14 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     return 0;
 }
 
-// EN CONSTRUCTION JE SUIS DEAD
-uint32_t nb_fileblock(uint8_t* file_header)
+
+size_t nb_fileblock(uint8_t* file_header)
 {
     char* size = (char *)malloc(sizeof(char) * 12);
     memcpy(size, file_header + 124, 12);
-    // TO-DO: convertir size (uint8_t aka bytes) en integer (uint32_t), si tu veux le faire hesite pas j'ai trop la flemme
-    uint32_t int_repr = 0;// TO-DO
-    uint32_t nb = (int_repr + 512 - 1) / 512;
+    size_t int_repr = TAR_INT(size);
+    size_t nb = (int_repr + 512 - 1) / 512;
+    printf("nb_fileblock|int_repr:%lu nb_bloc:%lu\n",int_repr,nb);
     free(size);
     return nb;
 }
@@ -320,12 +316,13 @@ int check_archive(int tar_fd)
 {
     FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
-    printf("header:\n");
     fread(header, BSIZE, 1, tar_fp);
     int dir_to_end = 0;
-    debug_hex((uint8_t*) header, BSIZE);
+
+
     while (1){
         debug_hex((uint8_t*) header, BSIZE);
+        printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
 
         int type = blocktype((uint8_t*) header);
@@ -334,12 +331,15 @@ int check_archive(int tar_fd)
                 int check = check_header(header);
                 if (check < 0) return check;
                 free(header);
-                lseek(tar_fd,BSIZE * nb_fileblock((uint8_t*) header),SEEK_CUR);
+                size_t nb_block = nb_fileblock((uint8_t*) header);
+                printf("check_archive|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
+                fread(header, BSIZE, nb_block, tar_fp); //move pointer by the nb of blocks th file is
                 if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in file\n"); break;};
         }else if(type==2){//directory
             int check = check_header(header);
             if (check < 0) return -1;
             dir_to_end +=1;
+            printf("check_archive|dir header checked %s\n",header->name);
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in dir\n"); break;};
         }else if(type==3){ //symlink
             char* path = symlink_path((uint8_t*) header); // find linked file
