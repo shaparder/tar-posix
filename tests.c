@@ -25,6 +25,7 @@ void debug_dump(const uint8_t *bytes, size_t len) {
     }
 }
 
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         printf("Usage: ./%s tar_file\n", argv[0]);
@@ -42,13 +43,16 @@ int main(int argc, char **argv) {
 
     printf("checkarchive return:%i \n",check_archive(fd));
 
-    uint8_t* buffer = get_buffer(fd, "folder1/", 2);
+    /*
+    uint8_t* buffer = get_buffer(fd, "lib_tar.h", 2);
     if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
     else
     {
       debug_dump(buffer, 512 * 2);
       blocktype(buffer);
       free(buffer);
-    }
+    }*/
+
+    
     return 0;
 }
