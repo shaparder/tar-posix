@@ -6,25 +6,26 @@
 
 #define BSIZE 512
 
-/**
- * You are free to use this file to write tests for your implementation
- */
 
-void debug_hex(const uint8_t *bytes, size_t len) {
-    for (int i = 0; i < len;) {
-        printf("%04x:  ", (int) i);
-
-        for (int j = 0; j < 16 && i + j < len; j++) {
-            printf("%02x ", bytes[i + j]);
-        }
-        printf("\t");
-        for (int j = 0; j < 16 && i < len; j++, i++) {
-            printf("%c ", bytes[i]);
-        }
-        printf("\n");
+char *int2str(int nb) {
+    int i = 0;
+    int div = 1;
+    int cmp = nb;
+    char *nbr = malloc(sizeof(char) * 12);
+    if (!nbr)
+        return (NULL);
+    if (nb < 0)
+        nbr[i++] = '-';
+    while ((cmp /= 10) != 0)
+        div = div * 10;
+    while (div > 0) {
+        nbr[i++] = abs(nb / div) + 48;
+        nb = nb % div;
+        div /= 10;
     }
+    nbr[i] = '\0';
+    return (nbr);
 }
-
 
 /**
  * @brief Get buffer from path in file at
@@ -111,7 +112,9 @@ int check_header(tar_header_t* buffer){
     ver[2] = '\0';
     //printf("check_sum|buffer->version:%s\n",ver);
     if (strcmp(ver,TVERSION)!= 0) return -2;
+
     if (check_sum((uint8_t*) buffer)!=1) return -3;
+    
     return 0;
 }
 
@@ -316,47 +319,43 @@ int check_archive(int tar_fd)
 {
     FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
-    fread(header, BSIZE, 1, tar_fp);
-    int dir_to_end = 0;
 
 
-    while (1){
-        debug_hex((uint8_t*) header, BSIZE);
+    while (fread(header, BSIZE, 1, tar_fp)>0){
+        debug_dump((uint8_t*) header,BSIZE);
         printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
 
         int type = blocktype((uint8_t*) header);
 
         if(type==1){//file
-                int check = check_header(header);
-                if (check < 0) return check;
-                free(header);
-                size_t nb_block = nb_fileblock((uint8_t*) header);
-                printf("check_archive|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
-                fread(header, BSIZE, nb_block, tar_fp); //move pointer by the nb of blocks th file is
-                if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in file\n"); break;};
+            int check = check_header(header);
+            if (check < 0) return check;
+            size_t nb_block = nb_fileblock((uint8_t*) header);
+            printf("check_archive|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
+            fseek(tar_fp, BSIZE* nb_block, SEEK_CUR); //move pointer by the nb of blocks the file is
         }else if(type==2){//directory
             int check = check_header(header);
             if (check < 0) return -1;
-            dir_to_end +=1;
             printf("check_archive|dir header checked %s\n",header->name);
-            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in dir\n"); break;};
         }else if(type==3){ //symlink
-            char* path = symlink_path((uint8_t*) header); // find linked file
-            header = (tar_header_t*) get_buffer(tar_fd,path,1);
-            if(header == NULL) {printf("check_archive|buffer of path NULL\n"); break;};
+            long old_offset = ftell(tar_fp);
+            printf("check_archive|oldoffset i: %ld",old_offset);
+            int offset_block = 0;//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
+            fseek(tar_fp, BSIZE * offset_block, SEEK_SET);
             int check = check_header(header);
             if(check<0) return check;
-            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in symlink\n"); break;};
-            continue; //jump to next iteration
+            fseek(tar_fp, old_offset, SEEK_SET);
         }
         if(is_padding((uint8_t*) header)){
-            dir_to_end --;
+            printf("check_archive|padding_block");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
+            if((!is_padding((uint8_t*) header))) return -4;
+            else break;
         }
 
     }
-    if(dir_to_end<0) printf("check_archive|not all dir have been closed\n");
+    free(header);
     return 0;
 }
 
@@ -427,7 +426,7 @@ int check_archive_avec_get_buffer_perso(int tar_fd)
     
     tar_header_t* header = get_buffer_at_offset(tar_fd,0);
     printf("header:\n");
-    debug_hex((uint8_t*) header, BSIZE);
+    debug_dump((uint8_t*) header, BSIZE);
     int file_to_end = 0;
     int nb_block_offset = 0;
     while (1){
