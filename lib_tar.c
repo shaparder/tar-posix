@@ -109,8 +109,12 @@ int check_header(tar_header_t* buffer){
     
     if (strcmp((char*) buffer+257,TMAGIC) != 0) return -1;
     //buffslice
-    printf("check_sum|buffer->version:%s\n",buffer->version);
-    if (strcmp((char*) buffer->version,TVERSION)!= 0) return -2;
+    
+    char ver[3];
+    memcpy(ver,buffer->version,2);
+    ver[2] = '\0';
+    //printf("check_sum|buffer->version:%s\n",ver);
+    if (strcmp(ver,TVERSION)!= 0) return -2;
     if (check_sum((uint8_t*) buffer)!=1) return -3;
     return 0;
 }
@@ -319,6 +323,7 @@ int check_archive(int tar_fd)
     printf("header:\n");
     fread(header, BSIZE, 1, tar_fp);
     int dir_to_end = 0;
+    debug_hex((uint8_t*) header, BSIZE);
     while (1){
         debug_hex((uint8_t*) header, BSIZE);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
