@@ -7,25 +7,6 @@
 #define BSIZE 512
 
 
-char *int2str(int nb) {
-    int i = 0;
-    int div = 1;
-    int cmp = nb;
-    char *nbr = malloc(sizeof(char) * 12);
-    if (!nbr)
-        return (NULL);
-    if (nb < 0)
-        nbr[i++] = '-';
-    while ((cmp /= 10) != 0)
-        div = div * 10;
-    while (div > 0) {
-        nbr[i++] = abs(nb / div) + 48;
-        nb = nb % div;
-        div /= 10;
-    }
-    nbr[i] = '\0';
-    return (nbr);
-}
 
 /**
  * @brief Get buffer from path in file at
@@ -57,6 +38,7 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     return NULL;
 }
 
+
 tar_header_t* get_buffer_at_offset(int tar_fd, int nbBlockOffset){
     FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
@@ -65,22 +47,7 @@ tar_header_t* get_buffer_at_offset(int tar_fd, int nbBlockOffset){
     return header;
 }
 
-/*
- * @brief copy slice of array to
- *
- * @param src
- * @param offset
- * @param len
- *
- * @return allocated char* containing the slice
- */
-uint8_t* buf_slice(uint8_t *src, size_t offset, size_t len)
-{
-    uint8_t* dest = (uint8_t *)malloc(sizeof(uint8_t) * len);
-    memcpy(dest, src + offset, len);
 
-    return dest;
-}
 
 /*
 * functions used in check_archive
@@ -288,10 +255,10 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 }
 
 
-size_t nb_fileblock(uint8_t* file_header)
+size_t nb_fileblock(tar_header_t* file_header)
 {
     char* size = (char *)malloc(sizeof(char) * 12);
-    memcpy(size, file_header + 124, 12);
+    memcpy(size, file_header->size, 12);
     size_t int_repr = TAR_INT(size);
     size_t nb = (int_repr + 512 - 1) / 512;
     printf("nb_fileblock|int_repr:%lu nb_bloc:%lu\n",int_repr,nb);
@@ -326,17 +293,27 @@ int check_archive(int tar_fd)
         printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
 
+
+        //check if 2 padding blocks to end archive file
+        if(is_padding((uint8_t*) header)){
+            printf("check_archive|padding_block");
+            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
+            if((!is_padding((uint8_t*) header))) return -4;
+            else break;
+        }  
+
+        //check kind of file
         int type = blocktype((uint8_t*) header);
 
         if(type==1){//file
             int check = check_header(header);
             if (check < 0) return check;
-            size_t nb_block = nb_fileblock((uint8_t*) header);
+            size_t nb_block = nb_fileblock(header);
             printf("check_archive|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
             fseek(tar_fp, BSIZE* nb_block, SEEK_CUR); //move pointer by the nb of blocks the file is
         }else if(type==2){//directory
             int check = check_header(header);
-            if (check < 0) return -1;
+            if (check < 0) return check;
             printf("check_archive|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink
             long old_offset = ftell(tar_fp);
@@ -347,12 +324,7 @@ int check_archive(int tar_fd)
             if(check<0) return check;
             fseek(tar_fp, old_offset, SEEK_SET);
         }
-        if(is_padding((uint8_t*) header)){
-            printf("check_archive|padding_block");
-            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
-            if((!is_padding((uint8_t*) header))) return -4;
-            else break;
-        }
+        
 
     }
     free(header);
@@ -401,7 +373,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
             free(link);
           } break;
         case 1: {//file
-            uint32_t nb_blocks = nb_fileblock(buffer); // get number of blocks to read
+            size_t nb_blocks = nb_fileblock((tar_header_t*) buffer); // get number of blocks to read
             free(buffer);
             if (offset > nb_blocks * BSIZE) {
                 ret = -2;
