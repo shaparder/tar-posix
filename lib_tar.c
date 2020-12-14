@@ -266,6 +266,14 @@ size_t nb_fileblock(tar_header_t* file_header)
     return nb;
 }
 
+long get_offset_from_path(int tar_fd, char* path){
+    //FILE* tar_fp = fdopen(tar_fd, "r");
+    //tar_header_t* header = malloc(sizeof(tar_header_t));
+    long offset = 0;
+    // while(fread)
+    return offset;
+}
+
 
 /**
  * Checks whether the archive is valid.
@@ -296,7 +304,7 @@ int check_archive(int tar_fd)
 
         //check if 2 padding blocks to end archive file
         if(is_padding((uint8_t*) header)){
-            printf("check_archive|padding_block");
+            printf("check_archive|padding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
             if((!is_padding((uint8_t*) header))) return -4;
             else break;
@@ -318,7 +326,7 @@ int check_archive(int tar_fd)
         }else if(type==3){ //symlink
             long old_offset = ftell(tar_fp);
             printf("check_archive|oldoffset i: %ld",old_offset);
-            int offset_block = 0;//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
+            int offset_block = get_offset_from_path(tar_fd,header->name);//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
             fseek(tar_fp, BSIZE * offset_block, SEEK_SET);
             int check = check_header(header);
             if(check<0) return check;

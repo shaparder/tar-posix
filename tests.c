@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     //int ret = check_archive(fd);
     //printf("check_archive returned %d\n", ret);
 
-    //printf("checkarchive return:%i \n",check_archive(fd));
+    printf("checkarchive return:%i \n",check_archive(fd));
 
     /*
     uint8_t* buffer = get_buffer(fd, "lib_tar.h", 2);
