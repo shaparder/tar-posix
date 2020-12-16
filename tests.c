@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     }
 
     //test the check_archive
-    //printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
+    printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
     //printf("check_archive returned:%i \n",check_archive(fd));
 
     printf("TEST GET_BUFFER----------------------------------------------------------------------------------------------------------------------------\n");
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < *nb_entries; i++) 
         entries[i] = malloc(sizeof(char) * 100);
     
-    int ret_list = list(fd,"debug/folder1",entries,nb_entries);
+    int ret_list = list(fd,"/debug/folder1/subfolder1/",entries,nb_entries);
     printf("list returned:%d with nb_entries:%li \nentries: \n",ret_list,*nb_entries);
     for (size_t i = 0; i < *nb_entries; i++)
         printf("%s\n",entries[i]);

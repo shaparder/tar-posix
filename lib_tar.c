@@ -19,14 +19,14 @@
 uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     FILE* tar_fp = fdopen(tar_fd, "r");
     uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE * nb);
-    printf("get_buffer|file opened and buffer malloc\n");
+    printf("get_buffer|begin with path:%s\n",path);
     if (path==NULL){
         fread(buffer, BSIZE, 1, tar_fp);
         return buffer;
     } 
 
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
-        //printf("get_buffer|buffer:%s\n",(char*) buffer);
+        printf("get_buffer|buffer:%s\n",(char*) buffer);
         if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
                 fread(buffer + 512, BSIZE, nb - 1, tar_fp);
@@ -258,9 +258,14 @@ long get_offset_from_path(int tar_fd, char* path){
         }
         offset+=1;
     }
+    printf("get_offset_from_path|ERROR has not found the path:%s\n",path);
     return -1;
 }
 
+/*
+* return 1 si path est de la forme dir/_
+* return 0 sinon
+*/
 int is_path_of_dir(char* path, char* dir){
     //TODOOOOOOOOOOOOOOOOOOOOOOOOO
     return 1;
@@ -286,10 +291,21 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     size_t nb_listed_entries = 0;
-    printf("list|launched with no_entries:%li and path_header:\n",*no_entries);
+    printf("list|launched with no_entries:%li and path_header:%s\n",*no_entries,path);
+
+    //DEBUG
+    printf("list|DEBUG_TO_REMOVE first header of tar_fd:\n");
+    fread(header, BSIZE, 1, tar_fp);
+    debug_dump((uint8_t*) header,BSIZE);
+    //DEBUG
 
     //find header of guiven path
-    int offset = get_offset_from_path(tar_fd,header->name);
+    int offset = get_offset_from_path(tar_fd,path);
+    if(offset<0){
+        printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
+        *no_entries = 0;
+        return 0;
+    }
     fseek(tar_fp, offset, SEEK_SET);
     fread(header, BSIZE, 1, tar_fp);
     debug_dump((uint8_t*) header,BSIZE);
