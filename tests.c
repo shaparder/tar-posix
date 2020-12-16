@@ -38,21 +38,29 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    //int ret = check_archive(fd);
-    //printf("check_archive returned %d\n", ret);
+    //test the check_archive
+    //printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
+    //printf("check_archive returned:%i \n",check_archive(fd));
 
-    printf("checkarchive return:%i \n",check_archive(fd));
-
-    /*
-    uint8_t* buffer = get_buffer(fd, "lib_tar.h", 2);
+    printf("TEST GET_BUFFER----------------------------------------------------------------------------------------------------------------------------\n");
+    uint8_t* buffer = get_buffer(fd, "debug/folder2/symlink_file1txt", 2);
     if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
     else
     {
       debug_dump(buffer, 512 * 2);
       blocktype(buffer);
       free(buffer);
-    }*/
+    }
 
-    
+    printf("TEST READ_FILE----------------------------------------------------------------------------------------------------------------------------\n");
+    uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
+    size_t* len = malloc(sizeof(size_t));
+    char* path = malloc(sizeof(char) * 100);
+    path = "debug/folder2/symlink_file1txt";
+    ssize_t ret = read_file(fd, path, 3, read_buffer, len);
+    debug_dump(read_buffer,512*2);
+    printf("read_file returned:%ld\n",ret);
+    free(read_buffer); free(len); free(path);
+
     return 0;
 }
