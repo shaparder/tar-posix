@@ -294,12 +294,6 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     size_t nb_listed_entries = 0;
     printf("list|launched with no_entries:%li and path_header:%s\n",*no_entries,path);
 
-    //DEBUG
-    printf("list|DEBUG_TO_REMOVE first header of tar_fd:\n");
-    fread(header, BSIZE , 1, tar_fp);
-    debug_dump((uint8_t*) header,BSIZE);
-    //DEBUG
-
     //find header of guiven path
     int offset = get_offset_from_path(tar_fd,path); 
     if(offset<0){
@@ -325,7 +319,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     //begin listing th entries
     while (fread(header, BSIZE, 1, tar_fp)>0){
-        debug_dump((uint8_t*) header,BSIZE);
+        //debug_dump((uint8_t*) header,BSIZE);
         printf("list|checking header of %s nb_listed_entries:%li\n",header->name,nb_listed_entries);
         if(header == NULL){printf("list|NULL BUFFER\n");fflush(stdout);}
 
@@ -432,6 +426,7 @@ int check_archive(int tar_fd)
 
     }
     free(header);
+    //fclose(tar_fp); //marche paaas
     return 0;
 }
 

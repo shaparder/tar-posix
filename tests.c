@@ -37,12 +37,13 @@ int main(int argc, char **argv) {
         perror("open(tar_file)");
         return -1;
     }
-
+    
     //test the check_archive
     printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
-    printf("check_archive returned:%i \n",check_archive(fd));
+    //printf("check_archive returned:%i \n",check_archive(fd));
 
     printf("TEST GET_BUFFER----------------------------------------------------------------------------------------------------------------------------\n");
+
     uint8_t* buffer = get_buffer(fd, "debug/folder2/symlink_file1txt", 2);
     if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
     else
@@ -62,13 +63,14 @@ int main(int argc, char **argv) {
     free(read_buffer); free(len); 
 
     printf("TEST LIST----------------------------------------------------------------------------------------------------------------------------------------------\n");
+    fd = open(argv[1] , O_RDONLY);//si jenleve cette ligne list fonctionne plus 
     size_t* nb_entries = malloc(sizeof(size_t));
     *nb_entries = 5;
     char** entries = malloc(sizeof(char**)* (*nb_entries));
     for (size_t i = 0; i < *nb_entries; i++) 
         entries[i] = malloc(sizeof(char) * 100);
     
-    int ret_list = list(fd,"debug/folder1/subfolder1/",entries,nb_entries);
+    int ret_list = list(fd,"debug/folder1/subfolder1/symlinkfolder2",entries,nb_entries);
     printf("list returned:%d with nb_entries:%li \nentries: \n",ret_list,*nb_entries);
     for (size_t i = 0; i < *nb_entries; i++)
         printf("%s\n",entries[i]);
