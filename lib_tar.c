@@ -267,11 +267,16 @@ size_t nb_fileblock(tar_header_t* file_header)
 }
 
 long get_offset_from_path(int tar_fd, char* path){
-    //FILE* tar_fp = fdopen(tar_fd, "r");
-    //tar_header_t* header = malloc(sizeof(tar_header_t));
+    FILE* tar_fp = fdopen(tar_fd, "r"); 
+    tar_header_t* header = malloc(sizeof(tar_header_t));
     long offset = 0;
-    // while(fread)
-    return offset;
+    while(fread(header,BSIZE,1,tar_fp)>0){
+        if(strcmp(path,header->name)){
+            return offset * BSIZE;
+        }
+        offset+=1;
+    }
+    return -1;
 }
 
 
@@ -325,9 +330,11 @@ int check_archive(int tar_fd)
             printf("check_archive|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink
             long old_offset = ftell(tar_fp);
-            printf("check_archive|oldoffset i: %ld",old_offset);
-            int offset_block = get_offset_from_path(tar_fd,header->name);//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
-            fseek(tar_fp, BSIZE * offset_block, SEEK_SET);
+            printf("check_archive|oldoffset_blocks: %ld\n",old_offset/BSIZE);
+            int offset = get_offset_from_path(tar_fd,header->name);//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
+            fseek(tar_fp, offset, SEEK_SET);
+            fread(header,BSIZE,1,tar_fp);
+            debug_dump((uint8_t*) header,BSIZE);
             int check = check_header(header);
             if(check<0) return check;
             fseek(tar_fp, old_offset, SEEK_SET);
