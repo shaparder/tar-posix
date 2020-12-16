@@ -250,9 +250,10 @@ size_t nb_fileblock(tar_header_t* file_header)
 
 long get_offset_from_path(int tar_fd, char* path){
     FILE* tar_fp = fdopen(tar_fd, "r"); 
-    tar_header_t* header = malloc(sizeof(tar_header_t));
+    tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     long offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
+        printf("get_offset_from_path|header_path:%s\n",header->name);
         if(strcmp(path,header->name)){
             return offset * BSIZE;
         }
@@ -295,12 +296,12 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     //DEBUG
     printf("list|DEBUG_TO_REMOVE first header of tar_fd:\n");
-    fread(header, BSIZE, 1, tar_fp);
+    fread(header, BSIZE , 1, tar_fp);
     debug_dump((uint8_t*) header,BSIZE);
     //DEBUG
 
     //find header of guiven path
-    int offset = get_offset_from_path(tar_fd,path);
+    int offset = get_offset_from_path(tar_fd,path); 
     if(offset<0){
         printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
         *no_entries = 0;
