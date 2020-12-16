@@ -55,12 +55,26 @@ int main(int argc, char **argv) {
     printf("TEST READ_FILE----------------------------------------------------------------------------------------------------------------------------\n");
     uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
     size_t* len = malloc(sizeof(size_t));
-    char* path = malloc(sizeof(char) * 100);
-    path = "debug/folder2/symlink_file1txt";
-    ssize_t ret = read_file(fd, path, 3, read_buffer, len);
+    *len = 512*2;
+    ssize_t ret_readfile = read_file(fd, "debug/folder2/symlink_file1txt", 3, read_buffer, len);
     debug_dump(read_buffer,512*2);
-    printf("read_file returned:%ld\n",ret);
-    free(read_buffer); free(len); free(path);
+    printf("read_file returned:%ld\n",ret_readfile);
+    free(read_buffer); free(len); 
+
+    printf("TEST LIST----------------------------------------------------------------------------------------------------------------------------------------------\n");
+    size_t* nb_entries = malloc(sizeof(size_t));
+    *nb_entries = 5;
+    char** entries = malloc(sizeof(char**)* (*nb_entries));
+    for (size_t i = 0; i < *nb_entries; i++) 
+        entries[i] = malloc(sizeof(char) * 100);
+    
+    
+    int ret_list = list(fd,"debug/folder1",entries,nb_entries);
+    printf("list returned:%d with nb_entries:%li \nentries: \n",ret_list,*nb_entries);
+    for (size_t i = 0; i < *nb_entries; i++)
+        printf("%s\n",entries[i]);
+
+    free(nb_entries); free(entries);
 
     return 0;
 }

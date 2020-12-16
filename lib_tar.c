@@ -236,24 +236,6 @@ int is_symlink(int tar_fd, char *path)
     }
 }
 
-/**
- * Lists the entries at a given path in the archive.
- *
- * @param tar_fd A file descriptor pointing to the start of a tar archive file.
- * @param path A path to an entry in the archive. If the entry is a symlink, it must be resolved to its linked-to entry.
- * @param entries An array of char arrays, each one is long enough to contain a tar entry
- * @param no_entries An in-out argument.
- *                   The caller set it to the number of entry in entries.
- *                   The callee set it to the number of entry listed.
- *
- * @return zero if no directory at the given path exists in the archive
- *         any other value otherwise.
- */
-int list(int tar_fd, char *path, char **entries, size_t *no_entries)
-{
-    return 0;
-}
-
 
 size_t nb_fileblock(tar_header_t* file_header)
 {
@@ -279,6 +261,80 @@ long get_offset_from_path(int tar_fd, char* path){
     return -1;
 }
 
+
+/**
+ * Lists the entries at a given path in the archive.
+ *
+ * @param tar_fd A file descriptor pointing to the start of a tar archive file.
+ * @param path A path to an entry in the archive. If the entry is a symlink, it must be resolved to its linked-to entry.
+ * @param entries An array of char arrays, each one is long enough to contain a tar entry
+ * @param no_entries An in-out argument.
+ *                   The caller set it to the number of entry in entries.
+ *                   The callee set it to the number of entry listed.
+ *
+ * @return zero if no directory at the given path exists in the archive
+ *         any other value otherwise.
+ */
+int list(int tar_fd, char *path, char **entries, size_t *no_entries)
+{
+    FILE* tar_fp = fdopen(tar_fd, "r");
+    tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
+    size_t nb_listed_entries = 0;
+    printf("list|launched with no_entries:%li\n",*no_entries);
+
+    while (fread(header, BSIZE, 1, tar_fp)>0){
+        debug_dump((uint8_t*) header,BSIZE);
+        printf("list|checking header of %s nb_listed_entries:%li\n",header->name,nb_listed_entries);
+        if(header == NULL){printf("list|NULL BUFFER\n");fflush(stdout);}
+
+    
+        //check if 2 padding blocks to end archive file
+        if(is_padding((uint8_t*) header)){
+            printf("listpadding_block\n");
+            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
+            if((!is_padding((uint8_t*) header))) return -4;
+            else break;
+        }  
+
+        //if header n'est pas de ce dossier la
+
+        //check kind of file
+        int type = blocktype((uint8_t*) header);
+
+        if(type==1){//file
+            if (1 && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                memcpy(entries[nb_listed_entries],header->name,100);
+                nb_listed_entries++;
+            }
+            size_t nb_block = nb_fileblock(header);
+            printf("list|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
+            fseek(tar_fp, BSIZE* nb_block, SEEK_CUR); //move pointer by the nb of blocks the file is
+        }else if(type==2){//directory
+            if (1 && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                memcpy(entries[nb_listed_entries],header->name,100);
+                nb_listed_entries++;
+            }
+            printf("list|dir header checked %s\n",header->name);
+        }else if(type==3){ //symlink
+            long old_offset = ftell(tar_fp);
+            printf("list|oldoffset_blocks: %ld\n",old_offset/BSIZE);
+            int offset = get_offset_from_path(tar_fd,header->name);//funcion qui prend header et rend offset//TODO funct qui retrouve le header du symlink
+            fseek(tar_fp, offset, SEEK_SET);
+            fread(header,BSIZE,1,tar_fp);
+            debug_dump((uint8_t*) header,BSIZE);
+            if (1 && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                memcpy(entries[nb_listed_entries],header->name,100);
+                nb_listed_entries++;
+            }
+            fseek(tar_fp, old_offset, SEEK_SET);
+        }
+        
+
+    }
+    *no_entries = nb_listed_entries;
+    free(header);
+    return 0;
+}
 
 /**
  * Checks whether the archive is valid.
@@ -367,7 +423,8 @@ int check_archive(int tar_fd)
  *
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
-{
+{ 
+    //BUG le retrun me parait faux pq ca return -1 sur mon test
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
 
     int type = blocktype(buffer);
@@ -377,7 +434,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
         case 0: {//NULL
             ret = -1;
           } break;
-        case 2: { //directory
+        case 2: { //directory 
             free(buffer);
             ret = -1;
           } break;
