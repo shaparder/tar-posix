@@ -68,7 +68,6 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < *nb_entries; i++) 
         entries[i] = malloc(sizeof(char) * 100);
     
-    
     int ret_list = list(fd,"debug/folder1",entries,nb_entries);
     printf("list returned:%d with nb_entries:%li \nentries: \n",ret_list,*nb_entries);
     for (size_t i = 0; i < *nb_entries; i++)
