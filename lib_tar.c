@@ -44,7 +44,7 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     } 
 
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
-        printf("get_buffer|buffer->name:%s\n",(char*) buffer);
+        
         if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
                 fread(buffer + 512, BSIZE, nb - 1, tar_fp);
@@ -224,8 +224,6 @@ char* symlink_path(uint8_t* link_header)
 {
     char* link = (char *)malloc(sizeof(char) * 100);
     memcpy(link, link_header + 157, 100);
-    printf("symlink_path|symlink return::\n");
-    debug_hex((uint8_t*) link,100);
     return link;
 }
 
@@ -326,10 +324,10 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     //check if path is dir of symlink(resolved if symlink)
     int type = blocktype((uint8_t*) header);
-    if(type==3){
+    if(type==3){//symlink
         printf("list|path is symlink pointing to:%s\n",header->name);
         fseek(tar_fp, get_offset_from_path(tar_fd,header->name), SEEK_SET);
-    }else if(type==2){
+    }else if(type==2){//directory
         printf("list|path is dir can launch while\n");
     }else{
         free(header);
@@ -499,6 +497,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
                 size_t toread_bytes = (*len < (nb_blocks * BSIZE) - offset) ? *len : (nb_blocks * BSIZE) - offset; // number of bytes to read in file
                 memcpy(dest, buffer + 512 + offset, toread_bytes);
                 size_t unread_bytes = (nb_blocks * BSIZE) - offset - toread_bytes; // number of bytes still unread in file
+                printf("read_file|to_read_bytes:%lu  unread_bytes:%lu\n",toread_bytes,unread_bytes);
                 ret = (ssize_t) unread_bytes;
                 *len= toread_bytes;
                 free(buffer);
