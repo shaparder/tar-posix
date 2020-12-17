@@ -39,25 +39,39 @@ int main(int argc, char **argv) {
     }
     
     //test the check_archive
-    printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
-    //printf("check_archive returned:%i \n",check_archive(fd));
-
-    printf("TEST GET_BUFFER----------------------------------------------------------------------------------------------------------------------------\n");
-
-    uint8_t* buffer = get_buffer(fd, "debug/folder2/symlink_file1txt", 2);
-    if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
-    else
-    {
-      debug_dump(buffer, 512 * 2);
-      blocktype(buffer);
-      free(buffer);
+    if(1){
+        printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
+        printf("check_archive returned:%i \n",check_archive(fd));
+        printf("file int tar_fd:%u\n",fd);
+    }
+    if(1){
+        printf("TEST GET_BUFFER  normal file and symlink----------------------------------------------------------------------------------------------------------------------------\n");
+        uint8_t* buffer = get_buffer(fd, "debug/folder2/symlink_file1txt", 2);
+        if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
+        else
+        {
+            debug_dump(buffer, 512 * 2);
+            blocktype(buffer);
+            free(buffer);
+        }
+        buffer = get_buffer(fd, "debug/folder2/symlink_file1txt", 2);
+        if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
+        else
+        {
+            debug_dump(buffer, 512 * 2);
+            blocktype(buffer);
+            free(buffer);
+        }
     }
 
-    printf("TEST READ_FILE----------------------------------------------------------------------------------------------------------------------------\n");
+    printf("TEST READ_FILE  normal txt and symlink----------------------------------------------------------------------------------------------------------------------------\n");
     uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
     size_t* len = malloc(sizeof(size_t));
     *len = 512*2;
-    ssize_t ret_readfile = read_file(fd, "debug/folder2/symlink_file1txt", 3, read_buffer, len);
+    ssize_t ret_readfile = read_file(fd, "debug/folder1/file1.txt", 1, read_buffer, len);
+    debug_dump(read_buffer,512*2);
+    printf("read_file returned:%ld\n",ret_readfile);
+     ret_readfile = read_file(fd, "debug/folder2/symlink_file1txt", 3, read_buffer, len);
     debug_dump(read_buffer,512*2);
     printf("read_file returned:%ld\n",ret_readfile);
     free(read_buffer); free(len); 

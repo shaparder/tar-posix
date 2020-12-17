@@ -19,6 +19,7 @@
 uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     FILE* tar_fp = fdopen(tar_fd, "r");
     uint8_t* buffer = (uint8_t *)malloc(sizeof(uint8_t) * BSIZE * nb);
+    fseek(tar_fp,0,SEEK_SET);
     printf("get_buffer|begin with path:%s\n",path);
     if (path==NULL){
         fread(buffer, BSIZE, 1, tar_fp);
@@ -425,8 +426,9 @@ int check_archive(int tar_fd)
         
 
     }
+
     free(header);
-    //fclose(tar_fp); //marche paaas
+    //fclose(tar_fp); 
     return 0;
 }
 
