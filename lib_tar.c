@@ -332,6 +332,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     }else if(type==2){
         printf("list|path is dir can launch while\n");
     }else{
+        free(header);
         *no_entries = 0;
         return 0;
     }
@@ -347,7 +348,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if(is_padding((uint8_t*) header)){
             printf("listpadding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
-            if((!is_padding((uint8_t*) header))) return -4;
+            if((!is_padding((uint8_t*) header))) return 1;
             else break;
         }  
 
@@ -356,7 +357,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         int type = blocktype((uint8_t*) header);
 
         if(type==1){//file
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
                 memcpy(entries[nb_listed_entries],header->name,100);
                 nb_listed_entries++;
             }
@@ -364,14 +365,13 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
             printf("list|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
             fseek(tar_fp, BSIZE* nb_block, SEEK_CUR); //move pointer by the nb of blocks the file is
         }else if(type==2){//directory
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
                 memcpy(entries[nb_listed_entries],header->name,100);
                 nb_listed_entries++;
             }
             printf("list|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {//TODO check si path/file TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-                memcpy(entries[nb_listed_entries],header->name,100);
+            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
                 nb_listed_entries++;
             }
             printf("list|symlink header checked %s\n",header->name);
@@ -379,7 +379,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     }
     *no_entries = nb_listed_entries;
     free(header);
-    return 0;
+    return 1;
 }
 
 /**
@@ -401,9 +401,11 @@ int check_archive(int tar_fd)
 {
     FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
+    int nb_headers = 0;
 
 
     while (fread(header, BSIZE, 1, tar_fp)>0){
+        
         debug_hex((uint8_t*) header,BSIZE);
         printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
@@ -413,9 +415,11 @@ int check_archive(int tar_fd)
         if(is_padding((uint8_t*) header)){
             printf("check_archive|padding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
-            if((!is_padding((uint8_t*) header))) return -4;
+            if((!is_padding((uint8_t*) header))) return nb_headers;
             else break;
         }  
+
+        nb_headers ++;
 
         //check kind of file
         int type = blocktype((uint8_t*) header);
@@ -445,7 +449,7 @@ int check_archive(int tar_fd)
 
     free(header);
     //fclose(tar_fp); 
-    return 0;
+    return nb_headers;
 }
 
 
@@ -470,7 +474,7 @@ int check_archive(int tar_fd)
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 { 
-    //BUG le retrun me parait faux pq ca return -1 sur mon test
+    
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
 
     int type = blocktype(buffer);
