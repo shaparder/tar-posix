@@ -281,11 +281,33 @@ long get_offset_from_path(int tar_fd, char* path){
 }
 
 /*
-* return 1 si path est de la forme dir/_
+* return 1 si path est de la forme dir/_*
 * return 0 sinon
 */
 int is_path_of_dir(char* path, char* dir){
-    return (strstr(path,dir) !=NULL);
+    if (strstr(path,dir) == NULL) return 0;
+    int c_path = 0; int c_dir = 0;
+    for (int i=0;i< strlen(dir);i++) {
+        if (dir[i] == '/'){
+            c_dir++;
+        }
+    }
+    
+    for (int i=0;i< strlen(path);i++) {
+        if (c_path > c_dir){
+            return 0;
+        }
+        if (path[i] == '/'){
+            c_path++;
+        }
+    }
+    return 1;
+}
+
+char* cut_path(char* path, char* dir){
+    int i = 0;
+    for (;i< strlen(dir);i++) {}
+    return path+i;
 }
 
 
@@ -327,14 +349,16 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     if(type==3){//symlink
         printf("list|path is symlink pointing to:%s\n",header->name);
         fseek(tar_fp, get_offset_from_path(tar_fd,header->name), SEEK_SET);
+        
     }else if(type==2){//directory
         printf("list|path is dir can launch while\n");
     }else{
-        free(header);
+        free(header); //maybe erreur sur ingi
         *no_entries = 0;
         return 0;
     }
-
+    char* dir = malloc(sizeof(char)*100);
+    memcpy(dir,header->name,100);
     //begin listing th entries
     while (fread(header, BSIZE, 1, tar_fp)>0){
         //debug_hex((uint8_t*) header,BSIZE);
@@ -346,7 +370,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         if(is_padding((uint8_t*) header)){
             printf("listpadding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
-            if((!is_padding((uint8_t*) header))) return 1;
+            if((!is_padding((uint8_t*) header))) return -4;
             else break;
         }  
 
@@ -355,21 +379,25 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         int type = blocktype((uint8_t*) header);
 
         if(type==1){//file
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
-                memcpy(entries[nb_listed_entries],header->name,100);
+            if (is_path_of_dir(header->name,dir) && nb_listed_entries < *no_entries) {
+                char* cut = cut_path(header->name,dir);
+                memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
             }
             size_t nb_block = nb_fileblock(header);
             printf("list|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
             fseek(tar_fp, BSIZE* nb_block, SEEK_CUR); //move pointer by the nb of blocks the file is
         }else if(type==2){//directory
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
-                memcpy(entries[nb_listed_entries],header->name,100);
+            if (is_path_of_dir(header->name,dir) && nb_listed_entries < *no_entries) {
+                char* cut = cut_path(header->name,dir);
+                memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
             }
             printf("list|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink
-            if (is_path_of_dir(header->name,path) && nb_listed_entries < *no_entries) {
+            if (is_path_of_dir(header->name,dir) && nb_listed_entries < *no_entries) {
+                char* cut = cut_path(header->name,dir);
+                memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
             }
             printf("list|symlink header checked %s\n",header->name);
@@ -377,7 +405,8 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     }
     *no_entries = nb_listed_entries;
     free(header);
-    return 1;
+    free(dir);
+    return 0;
 }
 
 /**
