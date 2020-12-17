@@ -209,7 +209,7 @@ int is_dir(int tar_fd, char *path)
  * @param link_header buffer containing symlink header
  * @return char* path of linked file
  */
-char* symlink_path_old(uint8_t* link_header)
+char* symlink_path(uint8_t* link_header)
 {
     char* link = (char *)malloc(sizeof(char) * 100);
     memcpy(link, link_header + 157, 100);
@@ -224,7 +224,7 @@ char* symlink_path_old(uint8_t* link_header)
  * @param link_header buffer containing symlink header
  * @return char* path of linked file
  */
-char* symlink_path(uint8_t* link_header)
+char* symlink_path_new(uint8_t* link_header)
 {
     char* linkname = (char*) link_header + 157;
     char* name = (char*) link_header + 0;
@@ -288,8 +288,7 @@ long get_offset_from_path(int tar_fd, char* path){
 * return 0 sinon
 */
 int is_path_of_dir(char* path, char* dir){
-    //TODOOOOOOOOOOOOOOOOOOOOOOOOO
-    return 1;
+    return (strstr(path,dir) !=NULL);
 }
 
 

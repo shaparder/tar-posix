@@ -39,13 +39,13 @@ int main(int argc, char **argv) {
     }
     
     
-    if(0){//CHECK_ARCHIVE
+    if(1){//CHECK_ARCHIVE
         printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
         printf("check_archive returned:%i \n",check_archive(fd));
    
     }
 
-    if(0){//GET_BUFFER
+    if(1){//GET_BUFFER
         printf("TEST GET_BUFFER  normal file and symlink----------------------------------------------------------------------------------------------------------------------------\n");
         uint8_t* buffer = get_buffer(fd, "debug/folder1/file1.txt", 2);
         if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
         free(read_buffer); free(len); 
     }
 
-    if(0){//LIST
+    if(1){//LIST
         printf("TEST LIST----------------------------------------------------------------------------------------------------------------------------------------------\n");
         fd = open(argv[1] , O_RDONLY);//si jenleve cette ligne list fonctionne plus 
         size_t* nb_entries = malloc(sizeof(size_t));
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
         for (size_t i = 0; i < *nb_entries; i++) 
             entries[i] = malloc(sizeof(char) * 100);
 
-        int ret_list = list(fd,"debug/folder1/subfolder1/symlinkfolder2",entries,nb_entries);
+        int ret_list = list(fd,"debug/folder2",entries,nb_entries);
         printf("list returned:%d with nb_entries:%li \nentries: \n",ret_list,*nb_entries);
         for (size_t i = 0; i < *nb_entries; i++)
             printf("%s\n",entries[i]);
