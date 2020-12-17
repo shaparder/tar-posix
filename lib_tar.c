@@ -41,25 +41,21 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     if (path==NULL){
         fread(buffer, BSIZE, 1, tar_fp);
         return buffer;
-    } 
+    }
 
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
-        
+
         if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
                 fread(buffer + 512, BSIZE, nb - 1, tar_fp);
             return buffer;
         }
     }
+
     printf("get_buffer|no header with path:%s\n",path);
     free(buffer);
     return NULL;
 }
-
-
-
-
-
 
 /*
 * functions used in check_archive
@@ -83,9 +79,9 @@ int check_sum(uint8_t* buffer){
 }
 
 int check_header(tar_header_t* buffer){
-    
+
     if (strcmp((char*) buffer+257,TMAGIC) != 0) return -1;
-    
+
     char ver[3];
     memcpy(ver,buffer->version,2);
     ver[2] = '\0';
@@ -93,7 +89,7 @@ int check_header(tar_header_t* buffer){
     if (strcmp(ver,TVERSION)!= 0) return -2;
 
     if (check_sum((uint8_t*) buffer)!=1) return -3;
-    
+
     return 0;
 }
 
@@ -106,9 +102,6 @@ int is_padding(uint8_t* buffer){
     }
     return 1;
 }
-
-
-
 
 /**
  * Checks whether an entry exists in the archive.
@@ -227,9 +220,6 @@ char* symlink_path(uint8_t* link_header)
     return link;
 }
 
-
-
-
 /**
  * Checks whether an entry exists in the archive and is a symlink.
  *
@@ -251,7 +241,6 @@ int is_symlink(int tar_fd, char *path)
     }
 }
 
-
 size_t nb_fileblock(tar_header_t* file_header)
 {
     char* size = (char *)malloc(sizeof(char) * 12);
@@ -264,7 +253,7 @@ size_t nb_fileblock(tar_header_t* file_header)
 }
 
 long get_offset_from_path(int tar_fd, char* path){
-    FILE* tar_fp = fdopen(tar_fd, "r"); 
+    FILE* tar_fp = fdopen(tar_fd, "r");
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     long offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
@@ -292,7 +281,7 @@ int is_path_of_dir(char* path, char* dir){
             c_dir++;
         }
     }
-    
+
     for (int i=0;i< strlen(path);i++) {
         if (c_path > c_dir){
             return 0;
@@ -309,7 +298,6 @@ char* cut_path(char* path, char* dir){
     for (;i< strlen(dir);i++) {}
     return path+i;
 }
-
 
 /**
  * Lists the entries at a given path in the archive.
@@ -333,7 +321,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     printf("list|launched with no_entries:%li and path_header:%s\n",*no_entries,path);
 
     //find header of guiven path
-    int offset = get_offset_from_path(tar_fd,path); 
+    int offset = get_offset_from_path(tar_fd,path);
     if(offset<0){//path n'exitse pas dans le header
         printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
         free(header);
@@ -349,7 +337,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     if(type==3){//symlink
         printf("list|path is symlink pointing to:%s\n",header->name);
         fseek(tar_fp, get_offset_from_path(tar_fd,header->name), SEEK_SET);
-        
+
     }else if(type==2){//directory
         printf("list|path is dir can launch while\n");
     }else{
@@ -365,14 +353,14 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         printf("list|checking header of %s nb_listed_entries:%li\n",header->name,nb_listed_entries);
         if(header == NULL){printf("list|NULL BUFFER\n");fflush(stdout);}
 
-    
+
         //check if 2 padding blocks to end archive file
         if(is_padding((uint8_t*) header)){
             printf("listpadding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
             if((!is_padding((uint8_t*) header))) return -4;
             else break;
-        }  
+        }
 
 
         //check kind of file
@@ -432,7 +420,7 @@ int check_archive(int tar_fd)
 
 
     while (fread(header, BSIZE, 1, tar_fp)>0){
-        
+
         debug_hex((uint8_t*) header,BSIZE);
         printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
@@ -444,7 +432,7 @@ int check_archive(int tar_fd)
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("check_archive|fread EOF in padding\n"); break;};
             if((!is_padding((uint8_t*) header))) return nb_headers;
             else break;
-        }  
+        }
 
         nb_headers ++;
 
@@ -469,12 +457,9 @@ int check_archive(int tar_fd)
     }
 
     free(header);
-    //fclose(tar_fp); 
+    //fclose(tar_fp);
     return nb_headers;
 }
-
-
-
 
 /**
  * Reads a file at a given path in the archive.
@@ -494,8 +479,7 @@ int check_archive(int tar_fd)
  *
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
-{ 
-    
+{
     uint8_t* buffer = get_buffer(tar_fd, path, 1);
 
     int type = blocktype(buffer);
@@ -505,7 +489,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
         case 0: {//NULL
             ret = -1;
           } break;
-        case 2: { //directory 
+        case 2: { //directory
             free(buffer);
             ret = -1;
           } break;
