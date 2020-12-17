@@ -39,13 +39,13 @@ int main(int argc, char **argv) {
     }
     
     
-    if(1){//CHECK_ARCHIVE
+    if(0){//CHECK_ARCHIVE
         printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
         printf("check_archive returned:%i \n",check_archive(fd));
    
     }
 
-    if(1){//GET_BUFFER
+    if(0){//GET_BUFFER
         printf("TEST GET_BUFFER  normal file and symlink----------------------------------------------------------------------------------------------------------------------------\n");
         uint8_t* buffer = get_buffer(fd, "debug/folder1/file1.txt", 2);
         if (buffer == NULL) printf("NULL BUFFER from get_buffer\n");
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
         free(read_buffer); free(len); 
     }
 
-    if(1){//LIST
+    if(0){//LIST
         printf("TEST LIST----------------------------------------------------------------------------------------------------------------------------------------------\n");
         fd = open(argv[1] , O_RDONLY);//si jenleve cette ligne list fonctionne plus 
         size_t* nb_entries = malloc(sizeof(size_t));

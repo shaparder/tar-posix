@@ -6,7 +6,24 @@
 
 #define BSIZE 512
 
+/**
+ * You are free to use this file to write tests for your implementation
+ */
 
+void debug_hex(const uint8_t *bytes, size_t len) {
+    for (int i = 0; i < len;) {
+        printf("%04x:  ", (int) i);
+
+        for (int j = 0; j < 16 && i + j < len; j++) {
+            printf("%02x ", bytes[i + j]);
+        }
+        printf("\t");
+        for (int j = 0; j < 16 && i < len; j++, i++) {
+            printf("%c ", bytes[i]);
+        }
+        printf("\n");
+    }
+}
 
 /**
  * @brief Get buffer from path in file at
@@ -40,13 +57,7 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
 }
 
 
-tar_header_t* get_buffer_at_offset(int tar_fd, int nbBlockOffset){
-    FILE* tar_fp = fdopen(tar_fd, "r");
-    tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
-    lseek(tar_fd,BSIZE * nbBlockOffset,SEEK_SET);
-    if(fread(header, BSIZE, 1, tar_fp)<0) return NULL;
-    return header;
-}
+
 
 
 
@@ -214,26 +225,12 @@ char* symlink_path(uint8_t* link_header)
     char* link = (char *)malloc(sizeof(char) * 100);
     memcpy(link, link_header + 157, 100);
     printf("symlink_path|symlink return::\n");
-    debug_dump((uint8_t*) link,100);
+    debug_hex((uint8_t*) link,100);
     return link;
 }
 
-/**
- * @brief get path of symlink file
- *
- * @param link_header buffer containing symlink header
- * @return char* path of linked file
- */
-char* symlink_path_new(uint8_t* link_header)
-{
-    char* linkname = (char*) link_header + 157;
-    char* name = (char*) link_header + 0;
-    char* link = malloc(sizeof(char) * 100);
-    link = strcat(name,linkname);
-    printf("symlink_path|symlink return:\n");
-    debug_dump((uint8_t*) link,100);
-    return link;
-}
+
+
 
 /**
  * Checks whether an entry exists in the archive and is a symlink.
@@ -275,11 +272,13 @@ long get_offset_from_path(int tar_fd, char* path){
     while(fread(header,BSIZE,1,tar_fp)>0){
         printf("get_offset_from_path|header_path:%s\n",header->name);
         if(strcmp(path,header->name)){
+            free(header);
             return offset * BSIZE;
         }
         offset+=1;
     }
     printf("get_offset_from_path|ERROR has not found the path:%s\n",path);
+    free(header);
     return -1;
 }
 
@@ -315,14 +314,15 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     //find header of guiven path
     int offset = get_offset_from_path(tar_fd,path); 
-    if(offset<0){
+    if(offset<0){//path n'exitse pas dans le header
         printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
+        free(header);
         *no_entries = 0;
         return 0;
     }
     fseek(tar_fp, offset, SEEK_SET);
     fread(header, BSIZE, 1, tar_fp);
-    debug_dump((uint8_t*) header,BSIZE);
+    debug_hex((uint8_t*) header,BSIZE);
 
     //check if path is dir of symlink(resolved if symlink)
     int type = blocktype((uint8_t*) header);
@@ -338,7 +338,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
     //begin listing th entries
     while (fread(header, BSIZE, 1, tar_fp)>0){
-        //debug_dump((uint8_t*) header,BSIZE);
+        //debug_hex((uint8_t*) header,BSIZE);
         printf("list|checking header of %s nb_listed_entries:%li\n",header->name,nb_listed_entries);
         if(header == NULL){printf("list|NULL BUFFER\n");fflush(stdout);}
 
@@ -404,7 +404,7 @@ int check_archive(int tar_fd)
 
 
     while (fread(header, BSIZE, 1, tar_fp)>0){
-        debug_dump((uint8_t*) header,BSIZE);
+        debug_hex((uint8_t*) header,BSIZE);
         printf("check_archive|checking header of %s\n",header->name);
         if(header == NULL){printf("check_archive|NULL BUFFER\n");fflush(stdout);}
 
@@ -430,19 +430,17 @@ int check_archive(int tar_fd)
             int check = check_header(header);
             if (check < 0) return check;
             printf("check_archive|dir header checked %s\n",header->name);
-        }else if(type==3){ //symlink
+        }else if(type==3){ //symlink ACHANGER FAUT CHECK VERS QUOI CA POINTE
             long old_offset = ftell(tar_fp);
             printf("check_archive|oldoffset_blocks: %ld\n",old_offset/BSIZE);
             int offset = get_offset_from_path(tar_fd,header->name);
             fseek(tar_fp, offset, SEEK_SET);
             fread(header,BSIZE,1,tar_fp);
-            debug_dump((uint8_t*) header,BSIZE);
+            debug_hex((uint8_t*) header,BSIZE);
             int check = check_header(header);
             if(check<0) return check;
             fseek(tar_fp, old_offset, SEEK_SET);
         }
-        
-
     }
 
     free(header);
