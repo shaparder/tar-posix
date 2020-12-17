@@ -27,7 +27,7 @@ uint8_t* get_buffer(int tar_fd, char* path, int nb) {
     } 
 
     while (fread(buffer, BSIZE, 1, tar_fp) > 0){
-        printf("get_buffer|buffer:%s\n",(char*) buffer);
+        printf("get_buffer|buffer->name:%s\n",(char*) buffer);
         if (strcmp(path, (char*)buffer) == 0) {
             if (nb > 1)
                 fread(buffer + 512, BSIZE, nb - 1, tar_fp);
@@ -209,10 +209,29 @@ int is_dir(int tar_fd, char *path)
  * @param link_header buffer containing symlink header
  * @return char* path of linked file
  */
-char* symlink_path(uint8_t* link_header)
+char* symlink_path_old(uint8_t* link_header)
 {
     char* link = (char *)malloc(sizeof(char) * 100);
     memcpy(link, link_header + 157, 100);
+    printf("symlink_path|symlink return::\n");
+    debug_dump((uint8_t*) link,100);
+    return link;
+}
+
+/**
+ * @brief get path of symlink file
+ *
+ * @param link_header buffer containing symlink header
+ * @return char* path of linked file
+ */
+char* symlink_path(uint8_t* link_header)
+{
+    char* linkname = (char*) link_header + 157;
+    char* name = (char*) link_header + 0;
+    char* link = malloc(sizeof(char) * 100);
+    link = strcat(name,linkname);
+    printf("symlink_path|symlink return:\n");
+    debug_dump((uint8_t*) link,100);
     return link;
 }
 
@@ -470,6 +489,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
           } break;
         case 3: {//symlink
             char* link = symlink_path(buffer); // find linked file
+            printf("read_file|link of the symlink:%s\n", link);
             ret = read_file(tar_fd, link, offset, dest, len); // recursive call to link
             free(buffer);
             free(link);
@@ -485,6 +505,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
                 memcpy(dest, buffer + 512 + offset, toread_bytes);
                 size_t unread_bytes = (nb_blocks * BSIZE) - offset - toread_bytes; // number of bytes still unread in file
                 ret = (ssize_t) unread_bytes;
+                *len= toread_bytes;
                 free(buffer);
             }
           } break;
