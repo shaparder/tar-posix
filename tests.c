@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     }
     
     
-    if(0){//CHECK_ARCHIVE
+    if(1){//CHECK_ARCHIVE
         printf("TEST CHECK_ARCHIVE----------------------------------------------------------------------------------------------------------------------------\n");
         printf("check_archive returned:%i \n",check_archive(fd));
    
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if(1){//READ_FILE
+    if(0){//READ_FILE
         printf("TEST READ_FILE  normal txt and symlink----------------------------------------------------------------------------------------------------------------------------\n");
         uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
         size_t* len = malloc(sizeof(size_t));

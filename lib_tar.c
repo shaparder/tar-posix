@@ -435,15 +435,9 @@ int check_archive(int tar_fd)
             if (check < 0) return check;
             printf("check_archive|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink ACHANGER FAUT CHECK VERS QUOI CA POINTE
-            long old_offset = ftell(tar_fp);
-            printf("check_archive|oldoffset_blocks: %ld\n",old_offset/BSIZE);
-            int offset = get_offset_from_path(tar_fd,header->name);
-            fseek(tar_fp, offset, SEEK_SET);
-            fread(header,BSIZE,1,tar_fp);
-            debug_hex((uint8_t*) header,BSIZE);
             int check = check_header(header);
             if(check<0) return check;
-            fseek(tar_fp, old_offset, SEEK_SET);
+            printf("check_archive|symlink header checked %s\n",header->name);
         }
     }
 
