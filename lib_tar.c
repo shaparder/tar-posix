@@ -257,8 +257,8 @@ long get_offset_from_path(int tar_fd, char* path){
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     long offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
-        printf("get_offset_from_path|header_path:%s\n",header->name);
-        if(strcmp(path,header->name)){
+        if(strcmp(path,header->name)<0){
+            printf("get_offset_from_path|header_path:%s\n",header->name);
             free(header);
             return offset * BSIZE;
         }
@@ -371,7 +371,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 char* cut = cut_path(header->name,dir);
                 memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
-                printf("list|added cut:%s to entries\n",cut);
+                printf("list|ADD cut:%s to entries\n",cut);
             }
             size_t nb_block = nb_fileblock(header);
             printf("list|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
@@ -381,6 +381,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 char* cut = cut_path(header->name,dir);
                 memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
+                printf("list|ADD cut:%s to entries\n",cut);
             }
             printf("list|dir header checked %s\n",header->name);
         }else if(type==3){ //symlink
@@ -388,6 +389,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 char* cut = cut_path(header->name,dir);
                 memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
+                printf("list|ADD cut:%s to entries\n",cut);
             }
             printf("list|symlink header checked %s\n",header->name);
         }
