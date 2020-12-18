@@ -65,21 +65,23 @@ int main(int argc, char **argv) {
         }
     }
 
-    if(0){//READ_FILE
+    if(1){//READ_FILE
         printf("TEST READ_FILE  normal txt and symlink----------------------------------------------------------------------------------------------------------------------------\n");
         uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
         size_t* len = malloc(sizeof(size_t));
         *len = 512*2;
-        ssize_t ret_readfile = read_file(fd, "debug/folder1/file1.txt", 1, read_buffer, len);
-        debug_dump(read_buffer,*len);
+        printf("len before: %ld\n", *len);
+        ssize_t ret_readfile = read_file(fd, "debug/folder1/file2", 0, read_buffer, len);
+        printf("len after: %ld\n", *len);
+        //debug_dump(read_buffer,*len);
         printf("read_file returned:%ld\n",ret_readfile);
-            ret_readfile = read_file(fd, "debug/folder2/symlink_file1txt", 3, read_buffer, len);
-        debug_dump(read_buffer,*len);
-        printf("read_file returned:%ld\n",ret_readfile);
+        //ret_readfile = read_file(fd, "debug/folder2/symlink_file1txt", 3, read_buffer, len);
+        //debug_dump(read_buffer,*len);
+        //printf("read_file returned:%ld\n",ret_readfile);
         free(read_buffer); free(len); 
     }
 
-    if(1){//LIST
+    if(0){//LIST
         printf("TEST LIST----------------------------------------------------------------------------------------------------------------------------------------------\n");
         fd = open(argv[1] , O_RDONLY);//si jenleve cette ligne list fonctionne plus 
         size_t* nb_entries = malloc(sizeof(size_t));
