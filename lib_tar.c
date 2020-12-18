@@ -252,15 +252,15 @@ size_t nb_fileblock(tar_header_t* file_header)
     return nb;
 }
 
-long get_offset_from_path(int tar_fd, char* path){
+int get_offset_from_path(int tar_fd, char* path){
     FILE* tar_fp = fdopen(tar_fd, "r");
     fseek(tar_fp,0,SEEK_SET);
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
-    long offset = 0;
+    int offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
         //printf("get_offset_from_path|header_path:%s\n",header->name);
         if(strcmp(path,header->name)==0){
-            printf("get_offset_from_path|header_path:%s\n",header->name);
+            printf("get_offset_from_path|header_path:%s with offset_blocks:%i\n",header->name,offset);
             free(header);
             return offset * BSIZE;
         }
@@ -356,13 +356,13 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     //find header of guiven path
     int offset = get_offset_from_path(tar_fd,path);
     if(offset<0){//path n'exitse pas dans le header
-        char* spec_path = malloc(sizeof(char)*100);
+        char* path_avec_slash = malloc(sizeof(char)*100);
         int len = strlen(path);
-        memcpy(spec_path,path,len);
-        spec_path[len] = '/'; spec_path[len+1] = '\0';
-        printf("list|spec_path:%s\n",spec_path);
-        int offset = get_offset_from_path(tar_fd,spec_path);
-        free(spec_path);
+        memcpy(path_avec_slash,path,len);
+        path_avec_slash[len] = '/'; path_avec_slash[len+1] = '\0';
+        printf("list|spec_path:%s\n",path_avec_slash);
+        offset = get_offset_from_path(tar_fd,path_avec_slash);
+        free(path_avec_slash);
         if(offset<0){
             printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
             free(header);
