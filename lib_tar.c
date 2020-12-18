@@ -254,9 +254,11 @@ size_t nb_fileblock(tar_header_t* file_header)
 
 long get_offset_from_path(int tar_fd, char* path){
     FILE* tar_fp = fdopen(tar_fd, "r");
+    fseek(tar_fp,0,SEEK_SET);
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     long offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
+        //printf("get_offset_from_path|header_path:%s\n",header->name);
         if(strcmp(path,header->name)==0){
             printf("get_offset_from_path|header_path:%s\n",header->name);
             free(header);
@@ -300,6 +302,37 @@ char* cut_path(char* path, char* dir){
 }
 
 /**
+ * Function to find last index of any character in the given string
+ */
+int lastIndexOf(const char * str, const char toFind)
+{
+    int index = -1;
+    int i = 0;
+    while(str[i] != '\0')
+    {
+        // Update index if match is found
+        if(str[i] == toFind)
+        {
+            index = i;
+        }
+        i++;
+    }
+    return index;
+}
+
+char* new_path(char* path_of_symlink, char* linkname_of_symlink){
+    char* new_path = malloc(sizeof(char) * 100);
+   
+    int index_dernier_slash = lastIndexOf(path_of_symlink,'/')+1;
+
+    
+    memcpy(new_path,path_of_symlink,index_dernier_slash);
+    memcpy(new_path+index_dernier_slash,linkname_of_symlink,strlen(linkname_of_symlink));
+    printf("new_path|return:%s\n",new_path);
+    return new_path;
+}
+
+/**
  * Lists the entries at a given path in the archive.
  *
  * @param tar_fd A file descriptor pointing to the start of a tar archive file.
@@ -337,7 +370,9 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     if(type==3){//symlink
         while(blocktype((uint8_t*) header)==3){
             printf("list|path is symlink pointing to:%s\n",header->name);
-            fseek(tar_fp, get_offset_from_path(tar_fd,header->linkname), SEEK_SET);
+            char* newpath = new_path(header->name,header->linkname);
+            fseek(tar_fp, get_offset_from_path(tar_fd,newpath), SEEK_SET);
+            free(newpath);
             fread(header,BSIZE,1,tar_fp);
         }
         if(blocktype((uint8_t*) header)!=2){
@@ -364,10 +399,9 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 
         //check if 2 padding blocks to end archive file
         if(is_padding((uint8_t*) header)){
-            printf("listpadding_block\n");
+            printf("list|padding_block\n");
             if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
-            if((!is_padding((uint8_t*) header))) return -4;
-            else break;
+            break;
         }
 
 
