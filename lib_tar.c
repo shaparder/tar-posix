@@ -257,7 +257,7 @@ long get_offset_from_path(int tar_fd, char* path){
     tar_header_t* header = (tar_header_t*) malloc(sizeof(tar_header_t));
     long offset = 0;
     while(fread(header,BSIZE,1,tar_fp)>0){
-        if(strcmp(path,header->name)<0){
+        if(strcmp(path,header->name)==0){
             printf("get_offset_from_path|header_path:%s\n",header->name);
             free(header);
             return offset * BSIZE;
@@ -335,8 +335,16 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     //check if path is dir of symlink(resolved if symlink)
     int type = blocktype((uint8_t*) header);
     if(type==3){//symlink
-        printf("list|path is symlink pointing to:%s\n",header->name);
-        fseek(tar_fp, get_offset_from_path(tar_fd,header->name), SEEK_SET);
+        while(blocktype((uint8_t*) header)==3){
+            printf("list|path is symlink pointing to:%s\n",header->name);
+            fseek(tar_fp, get_offset_from_path(tar_fd,header->linkname), SEEK_SET);
+            fread(header,BSIZE,1,tar_fp);
+        }
+        if(blocktype((uint8_t*) header)!=2){
+            free(header); //maybe erreur sur ingi
+            *no_entries = 0;
+            return 0;
+        }
 
     }else if(type==2){//directory
         printf("list|path is dir can launch while\n");
