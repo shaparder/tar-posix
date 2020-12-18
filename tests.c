@@ -67,9 +67,10 @@ int main(int argc, char **argv) {
 
     if(1){//READ_FILE
         printf("TEST READ_FILE  normal txt and symlink----------------------------------------------------------------------------------------------------------------------------\n");
-        uint8_t* read_buffer = malloc(sizeof(uint8_t)* 512 *2);
         size_t* len = malloc(sizeof(size_t));
         *len = 512*4;
+        uint8_t* read_buffer = malloc(sizeof(uint8_t)* (*len));
+        
         printf("len before: %ld\n", *len);
         ssize_t ret_readfile = read_file(fd, "debug/folder1/file2", 0, read_buffer, len);
         printf("len after: %ld\n", *len);
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
         //debug_dump(read_buffer,*len);
         //printf("read_file returned:%ld\n",ret_readfile);
         free(read_buffer);
-        //free(len); 
+        free(len); 
     }
 
     if(0){//LIST
