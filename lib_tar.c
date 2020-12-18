@@ -252,6 +252,16 @@ size_t nb_fileblock(tar_header_t* file_header)
     return nb;
 }
 
+size_t nb_byte(tar_header_t* file_header)
+{
+    char* size = (char *)malloc(sizeof(char) * 12);
+    memcpy(size, file_header->size, 12);
+    size_t int_repr = TAR_INT(size);
+    printf("nb_byte|int_repr:%lu\n",int_repr);
+    free(size);
+    return int_repr;
+}
+
 long get_offset_from_path(int tar_fd, char* path){
     FILE* tar_fp = fdopen(tar_fd, "r");
     fseek(tar_fp,0,SEEK_SET);
@@ -557,18 +567,19 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
             free(link);
           } break;
         case 1: {//file
-            size_t nb_blocks = nb_fileblock((tar_header_t*) buffer); // get number of blocks to read
+            size_t nb_bytes = nb_byte((tar_header_t*) buffer); // get number of blocks to read
+            size_t nb_blocks = (nb_bytes + 512 - 1) / 512;
             free(buffer);
-            if (offset > nb_blocks * BSIZE) {
+            if (offset > nb_bytes) {
                 ret = -2;
             } else {
                 buffer = get_buffer(tar_fd, path, 1 + nb_blocks); // read header and file to buffer
-                size_t toread_bytes = (*len < (nb_blocks * BSIZE) - offset) ? *len : (nb_blocks * BSIZE) - offset; // number of bytes to read in file
+                size_t toread_bytes = (*len < (nb_bytes) - offset) ? *len : (nb_bytes) - offset; // number of bytes to read in file
                 memcpy(dest, buffer + 512 + offset, toread_bytes);
-                size_t unread_bytes = (nb_blocks * BSIZE) - offset - toread_bytes; // number of bytes still unread in file
+                size_t unread_bytes = (nb_bytes) - offset - toread_bytes; // number of bytes still unread in file
                 printf("read_file|to_read_bytes:%lu  unread_bytes:%lu\n",toread_bytes,unread_bytes);
                 ret = (ssize_t) unread_bytes;
-                *len= toread_bytes;
+                *len = toread_bytes;
                 free(buffer);
             }
           } break;
