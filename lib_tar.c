@@ -356,10 +356,19 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
     //find header of guiven path
     int offset = get_offset_from_path(tar_fd,path);
     if(offset<0){//path n'exitse pas dans le header
-        printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
-        free(header);
-        *no_entries = 0;
-        return 0;
+        char* spec_path = malloc(sizeof(char)*100);
+        int len = strlen(path);
+        memcpy(spec_path,path,len);
+        spec_path[len] = '/'; spec_path[len+1] = '\0';
+        printf("list|spec_path:%s\n",spec_path);
+        int offset = get_offset_from_path(tar_fd,spec_path);
+        free(spec_path);
+        if(offset<0){
+            printf("list|ERROR offset of path header:%i meaning no such path in the archive\n",offset);
+            free(header);
+            *no_entries = 0;
+            return 0;
+        }
     }
     fseek(tar_fp, offset, SEEK_SET);
     fread(header, BSIZE, 1, tar_fp);
@@ -400,7 +409,9 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
         //check if 2 padding blocks to end archive file
         if(is_padding((uint8_t*) header)){
             printf("list|padding_block\n");
-            if(fread(header, BSIZE, 1, tar_fp)<0) {printf("list|fread EOF in padding\n"); break;};
+            free(header);
+            *no_entries = nb_listed_entries;
+            return 1;
             break;
         }
 
