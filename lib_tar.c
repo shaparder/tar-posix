@@ -371,6 +371,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
                 char* cut = cut_path(header->name,dir);
                 memcpy(entries[nb_listed_entries],cut,strlen(cut));
                 nb_listed_entries++;
+                printf("list|added cut:%s to entries\n",cut);
             }
             size_t nb_block = nb_fileblock(header);
             printf("list|file header checked of %s with length: %lu blocks\n",header->name,nb_block);
